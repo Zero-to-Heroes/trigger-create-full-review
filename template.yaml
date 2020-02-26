@@ -1,0 +1,41 @@
+# https://github.com/awslabs/serverless-application-model/blob/develop/versions/2016-10-31.md
+# Indentation needs to be set with spaces, because YAML...
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Create a full review in rds
+
+# Globals:
+#     Function:
+#         Environment:
+#             Variables:
+#                 REVIEW_PUBLISHED_SNS_TOPIC: !Ref ReviewPublishedSnsTopic
+
+Resources:
+    # ReviewPublishedSnsTopic:
+    #     Type: AWS::SNS::Topic
+    #     Properties:
+    #         TopicName: 'review-published'
+    #         DisplayName: 'review-published'
+    PopulateGameSummaryFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: create-full-review.default
+            Runtime: nodejs10.x
+            Timeout: 25
+            CodeUri: ./dist/create-full-review
+            MemorySize: 256
+            ReservedConcurrentExecutions: 1 # for test purposes only, needs to be removed afterwards
+            Policies:
+                - AWSLambdaBasicExecutionRole
+                - AWSLambdaVPCAccessExecutionRole
+                - AmazonSESFullAccess
+                - SecretsManagerReadWrite
+                - AmazonSNSFullAccess
+                - AmazonSQSFullAccess
+                - AmazonS3FullAccess
+            Events:
+                SQSReplayOnS3Event:
+                    Type: SQS
+                    Properties:
+                        Queue: arn:aws:sqs:us-west-2:478062583808:replay-uploaded-test
+                        BatchSize: 1
