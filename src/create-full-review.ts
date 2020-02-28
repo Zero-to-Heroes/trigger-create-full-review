@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser';
 import { Metadata } from 'aws-sdk/clients/s3';
+import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
 import { AllCardsService } from './services/cards';
 import { getConnection } from './services/rds';
@@ -143,7 +144,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 			${nullIfEmpty(application)}
 		)
 	`;
-	// console.log('will execute query', query);
+	console.log('will execute query', query);
 	await mysql.query(query);
 
 	// console.log('Writing file'), replayString;
@@ -152,7 +153,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const read = await s3.readContentAsString('com.zerotoheroes.output', reviewKey);
 	// console.log('read file', read);
 
-	// TODO: notify review creation
 	sns.notifyReviewPublished({
 		reviewId: reviewId,
 		creationDate: toCreationDate,
@@ -178,6 +178,33 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		replayKey: reviewKey,
 		application: application,
 	});
+	if (application === 'firestone') {
+		sns.notifyFirestoneReviewPublished({
+			reviewId: reviewId,
+			creationDate: toCreationDate,
+			gameMode: gameMode,
+			gameFormat: gameFormat,
+			buildNumber: buildNumber,
+			scenarioId: scenarioId,
+			result: result,
+			additionalResult: additionalResult,
+			coinPlay: playCoin,
+			playerName: playerName,
+			playerClass: playerClass,
+			playerCardId: playerCardId,
+			playerRank: playerRank,
+			playerDeckName: playerDeckName,
+			playerDecklist: deckstring,
+			opponentName: opponentName,
+			opponentClass: opponentClass,
+			opponentCardId: opponentCardId,
+			opponentRank: opponentRank,
+			userId: userId,
+			uploaderToken: uploaderToken,
+			replayKey: reviewKey,
+			application: application,
+		});
+	}
 
 	return true;
 };
@@ -194,5 +221,5 @@ const toCreationDate = (today: Date): string => {
 };
 
 const nullIfEmpty = (value: string): string => {
-	return value == null ? 'NULL' : `'${value}'`;
+	return value == null ? 'NULL' : `${SqlString.escape(value)}`;
 };
