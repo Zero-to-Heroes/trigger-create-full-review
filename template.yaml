@@ -21,7 +21,7 @@ Resources:
         Properties:
             Handler: create-full-review.default
             Runtime: nodejs10.x
-            Timeout: 25
+            Timeout: 120
             CodeUri: ./dist/create-full-review
             MemorySize: 256
             # ReservedConcurrentExecutions: 1 # for test purposes only, needs to be removed afterwards

@@ -151,8 +151,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		// console.log('Writing file'), replayString;
 		await s3.writeFile(replayString, 'com.zerotoheroes.output', reviewKey, 'text/xml');
 		// console.log('file written', reviewKey);
-		const read = await s3.readContentAsString('com.zerotoheroes.output', reviewKey);
-		// console.log('read file', read);
+		// const read = await s3.readContentAsString('com.zerotoheroes.output', reviewKey);
 
 		sns.notifyReviewPublished({
 			reviewId: reviewId,
@@ -208,7 +207,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		}
 	} catch (e) {
 		console.error('could not parse replay', replayString);
-		throw e;
+		// throw e;
 	}
 
 	return true;

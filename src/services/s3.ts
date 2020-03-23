@@ -70,15 +70,23 @@ export class S3 {
 				console.warn('could not read s3 object', bucketName, key, err, retriesLeft);
 				setTimeout(() => {
 					this.readZippedContentInternal(bucketName, key, callback, retriesLeft - 1);
-				}, 3000);
+				}, 1000);
 				return;
 			}
-			const zipContent = await loadAsync(data.Body as any);
-			const file = Object.keys(zipContent.files)[0];
-			// console.log('files in zip', zipContent.files, file);
-			const objectContent = await zipContent.file(file).async('string');
-			// console.log('read object content', objectContent);
-			callback(objectContent);
+			try {
+				const zipContent = await loadAsync(data.Body as any);
+				const file = Object.keys(zipContent.files)[0];
+				// console.log('files in zip', zipContent.files, file);
+				const objectContent = await zipContent.file(file).async('string');
+				// console.log('read object content', objectContent);
+				callback(objectContent);
+			} catch (e) {
+				console.warn('could not read s3 object', bucketName, key, err, retriesLeft, e);
+				setTimeout(() => {
+					this.readZippedContentInternal(bucketName, key, callback, retriesLeft - 1);
+				}, 1000);
+				return;
+			}
 		});
 	}
 
