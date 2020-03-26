@@ -17,7 +17,7 @@
 	"private": true,
 	"dependencies": {
 		"@firestone-hs/hs-replay-xml-parser": "0.0.33",
-		"@firestone-hs/reference-data": "^0.1.20",
+		"@firestone-hs/reference-data": "^0.1.23",
 		"@types/elementtree": "^0.1.0",
 		"aws-sdk": "^2.524.0",
 		"elementtree": "^0.1.7",
