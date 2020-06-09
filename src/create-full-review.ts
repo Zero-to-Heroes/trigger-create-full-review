@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser';
+import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { Metadata } from 'aws-sdk/clients/s3';
 import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
@@ -51,6 +51,10 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	// }
 	// console.log('processing review', userId, message);
 	const replayString = await s3.readZippedContent(bucketName, key);
+	if (!replayString) {
+		console.error('Could not read file, not processing review', bucketName, key);
+		return false;
+	}
 	// console.log('replayString', replayString);
 
 	const reviewId = metadata['review-id'];
@@ -74,24 +78,31 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const application = undefinedAsNull(metadata['application-key']);
 
 	const today = new Date();
-	const reviewKey = `hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDay()}/${v4()}`;
+	const reviewKey = `hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}`;
+	const creationDate = toCreationDate(today);
+	// console.log('creating with dates', today, reviewKey, creationDate, today.getDate());
 
 	// console.log('preparing to parse replay');
+	// try {
+	let replay: Replay;
 	try {
-		const replay: Replay = parseHsReplayString(replayString);
-		// console.log('replay parsed');
-		const playerName = replay.mainPlayerName;
-		const opponentName = replay.opponentPlayerName;
-		const playerCardId = replay.mainPlayerCardId;
-		const opponentCardId = replay.opponentPlayerCardId;
-		const result = replay.result;
-		const additionalResult = replay.additionalResult;
-		const playCoin = replay.playCoin;
-		const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
-		const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
-		const creationDate = toCreationDate(today);
+		replay = parseHsReplayString(replayString);
+	} catch (e) {
+		console.error('Could not parse replay', e, message);
+		return false;
+	}
+	// console.log('replay parsed');
+	const playerName = replay.mainPlayerName;
+	const opponentName = replay.opponentPlayerName;
+	const playerCardId = replay.mainPlayerCardId;
+	const opponentCardId = replay.opponentPlayerCardId;
+	const result = replay.result;
+	const additionalResult = replay.additionalResult;
+	const playCoin = replay.playCoin;
+	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
+	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 
-		const query = `
+	const query = `
 			INSERT INTO replay_summary
 			(
 				reviewId,
@@ -145,17 +156,44 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				${nullIfEmpty(application)}
 			)
 		`;
-		console.log('will execute query', query);
-		await mysql.query(query);
+	// console.log('will execute query', query);
+	await mysql.query(query);
 
-		// console.log('Writing file'), replayString;
-		await s3.writeFile(replayString, 'com.zerotoheroes.output', reviewKey, 'text/xml');
-		// console.log('file written', reviewKey);
-		// const read = await s3.readContentAsString('com.zerotoheroes.output', reviewKey);
+	// console.log('Writing file'), replayString;
+	await s3.writeFile(replayString, 'com.zerotoheroes.output', reviewKey, 'text/xml');
+	await s3.writeFile(replayString, 'xml.firestoneapp.com', reviewKey, 'text/xml');
+	// console.log('file written', reviewKey);
+	// const read = await s3.readContentAsString('com.zerotoheroes.output', reviewKey);
 
-		sns.notifyReviewPublished({
+	sns.notifyReviewPublished({
+		reviewId: reviewId,
+		creationDate: creationDate,
+		gameMode: gameMode,
+		gameFormat: gameFormat,
+		buildNumber: buildNumber,
+		scenarioId: scenarioId,
+		result: result,
+		additionalResult: additionalResult,
+		coinPlay: playCoin,
+		playerName: playerName,
+		playerClass: playerClass,
+		playerCardId: playerCardId,
+		playerRank: playerRank,
+		playerDeckName: playerDeckName,
+		playerDecklist: deckstring,
+		opponentName: opponentName,
+		opponentClass: opponentClass,
+		opponentCardId: opponentCardId,
+		opponentRank: opponentRank,
+		userId: userId,
+		uploaderToken: uploaderToken,
+		replayKey: reviewKey,
+		application: application,
+	});
+	if (application === 'firestone') {
+		sns.notifyFirestoneReviewPublished({
 			reviewId: reviewId,
-			creationDate: creationDate,
+			creationDate: toCreationDate,
 			gameMode: gameMode,
 			gameFormat: gameFormat,
 			buildNumber: buildNumber,
@@ -178,37 +216,11 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 			replayKey: reviewKey,
 			application: application,
 		});
-		if (application === 'firestone') {
-			sns.notifyFirestoneReviewPublished({
-				reviewId: reviewId,
-				creationDate: toCreationDate,
-				gameMode: gameMode,
-				gameFormat: gameFormat,
-				buildNumber: buildNumber,
-				scenarioId: scenarioId,
-				result: result,
-				additionalResult: additionalResult,
-				coinPlay: playCoin,
-				playerName: playerName,
-				playerClass: playerClass,
-				playerCardId: playerCardId,
-				playerRank: playerRank,
-				playerDeckName: playerDeckName,
-				playerDecklist: deckstring,
-				opponentName: opponentName,
-				opponentClass: opponentClass,
-				opponentCardId: opponentCardId,
-				opponentRank: opponentRank,
-				userId: userId,
-				uploaderToken: uploaderToken,
-				replayKey: reviewKey,
-				application: application,
-			});
-		}
-	} catch (e) {
-		console.error('could not parse replay', replayString);
-		// throw e;
 	}
+	// } catch (e) {
+	// 	console.error('could not parse replay', replayString);
+	// 	// throw e;
+	// }
 
 	return true;
 };
