@@ -160,7 +160,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	await mysql.query(query);
 
 	// console.log('Writing file'), replayString;
-	await s3.writeFile(replayString, 'com.zerotoheroes.output', reviewKey, 'text/xml');
+	// await s3.writeFile(replayString, 'com.zerotoheroes.output', reviewKey, 'text/xml');
 	await s3.writeFile(replayString, 'xml.firestoneapp.com', reviewKey, 'text/xml');
 	// console.log('file written', reviewKey);
 	// const read = await s3.readContentAsString('com.zerotoheroes.output', reviewKey);
