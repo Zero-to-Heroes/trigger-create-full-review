@@ -1,5 +1,6 @@
 import { S3 as S3AWS } from 'aws-sdk';
 import { GetObjectRequest, Metadata } from 'aws-sdk/clients/s3';
+import * as JSZip from 'jszip';
 import { loadAsync } from 'jszip';
 
 export class S3 {
@@ -88,6 +89,20 @@ export class S3 {
 				return;
 			}
 		});
+	}
+
+	public async writeCompressedFile(content: any, bucket: string, fileName: string): Promise<boolean> {
+		const jszip = new JSZip.default();
+		console.log('ready to zip');
+		jszip.file('replay.xml', content);
+		const blob: Buffer = await jszip.generateAsync({
+			type: 'nodebuffer',
+			compression: 'DEFLATE',
+			compressionOptions: {
+				level: 9,
+			},
+		});
+		return this.writeFile(blob, bucket, fileName, 'application/zip');
 	}
 
 	public async writeFile(

@@ -39,7 +39,7 @@ export default async (event): Promise<any> => {
 
 const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Promise<boolean> => {
 	const bucketName = message.bucket.name;
-	const key = message.object.key;
+	const key: string = message.object.key;
 
 	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
 
@@ -76,9 +76,16 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const gameMode = undefinedAsNull(metadata['game-mode']);
 	const gameFormat = undefinedAsNull(metadata['game-format']);
 	const application = undefinedAsNull(metadata['application-key']);
+	// Flag that should ultimately go away when all versions are up to date
+	const shouldZip = undefinedAsNull(metadata['should-zip']);
+
+	console.log('processing replay', reviewId, shouldZip, key);
 
 	const today = new Date();
-	const reviewKey = `hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}`;
+	const replayKeySuffix = shouldZip ? '.xml.zip' : '';
+	const replayKey =
+		`hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}` +
+		replayKeySuffix;
 	const creationDate = toCreationDate(today);
 	// console.log('creating with dates', today, reviewKey, creationDate, today.getDate());
 
@@ -152,7 +159,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				${nullIfEmpty(opponentRank)},
 				${nullIfEmpty(userId)},
 				${nullIfEmpty(uploaderToken)},
-				${nullIfEmpty(reviewKey)},
+				${nullIfEmpty(replayKey)},
 				${nullIfEmpty(application)}
 			)
 		`;
@@ -160,10 +167,11 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	await mysql.query(query);
 
 	// console.log('Writing file'), replayString;
-	// await s3.writeFile(replayString, 'com.zerotoheroes.output', reviewKey, 'text/xml');
-	await s3.writeFile(replayString, 'xml.firestoneapp.com', reviewKey, 'text/xml');
-	// console.log('file written', reviewKey);
-	// const read = await s3.readContentAsString('com.zerotoheroes.output', reviewKey);
+	if (shouldZip) {
+		await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
+	} else {
+		await s3.writeFile(replayString, 'xml.firestoneapp.com', replayKey, 'text/xml');
+	}
 
 	sns.notifyReviewPublished({
 		reviewId: reviewId,
@@ -187,13 +195,13 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		opponentRank: opponentRank,
 		userId: userId,
 		uploaderToken: uploaderToken,
-		replayKey: reviewKey,
+		replayKey: replayKey,
 		application: application,
 	});
 	if (application === 'firestone') {
 		sns.notifyFirestoneReviewPublished({
 			reviewId: reviewId,
-			creationDate: toCreationDate,
+			creationDate: creationDate,
 			gameMode: gameMode,
 			gameFormat: gameFormat,
 			buildNumber: buildNumber,
@@ -213,7 +221,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 			opponentRank: opponentRank,
 			userId: userId,
 			uploaderToken: uploaderToken,
-			replayKey: reviewKey,
+			replayKey: replayKey,
 			application: application,
 		});
 	}
