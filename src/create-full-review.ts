@@ -77,9 +77,9 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const gameFormat = undefinedAsNull(metadata['game-format']);
 	const application = undefinedAsNull(metadata['application-key']);
 	// Flag that should ultimately go away when all versions are up to date
-	const shouldZip = undefinedAsNull(metadata['should-zip']);
+	const shouldZip = application === 'firestone' ? undefinedAsNull(metadata['should-zip']) : true;
 
-	console.log('processing replay', reviewId, shouldZip, key);
+	console.log('processing replay', reviewId, shouldZip, key, metadata);
 
 	const today = new Date();
 	const replayKeySuffix = shouldZip ? '.xml.zip' : '';
@@ -98,7 +98,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		console.error('Could not parse replay', e, message);
 		return false;
 	}
-	// console.log('replay parsed');
+	console.log('replay parsed');
 	const playerName = replay.mainPlayerName;
 	const opponentName = replay.opponentPlayerName;
 	const playerCardId = replay.mainPlayerCardId;
@@ -108,6 +108,14 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const playCoin = replay.playCoin;
 	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
+
+	// console.log('Writing file'), replayString;
+	if (shouldZip) {
+		await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
+	} else {
+		await s3.writeFile(replayString, 'xml.firestoneapp.com', replayKey, 'text/xml');
+	}
+	console.log('file written to s3');
 
 	const query = `
 			INSERT INTO replay_summary
@@ -165,13 +173,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		`;
 	// console.log('will execute query', query);
 	await mysql.query(query);
-
-	// console.log('Writing file'), replayString;
-	if (shouldZip) {
-		await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	} else {
-		await s3.writeFile(replayString, 'xml.firestoneapp.com', replayKey, 'text/xml');
-	}
 
 	sns.notifyReviewPublished({
 		reviewId: reviewId,

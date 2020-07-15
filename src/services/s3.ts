@@ -93,7 +93,7 @@ export class S3 {
 
 	public async writeCompressedFile(content: any, bucket: string, fileName: string): Promise<boolean> {
 		const jszip = new JSZip.default();
-		console.log('ready to zip');
+		console.log('ready to zip', content?.length);
 		jszip.file('replay.xml', content);
 		const blob: Buffer = await jszip.generateAsync({
 			type: 'nodebuffer',
@@ -102,6 +102,7 @@ export class S3 {
 				level: 9,
 			},
 		});
+		console.log('built blob');
 		return this.writeFile(blob, bucket, fileName, 'application/zip');
 	}
 
