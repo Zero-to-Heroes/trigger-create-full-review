@@ -55,16 +55,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		console.error('Could not read file, not processing review', bucketName, key);
 		return false;
 	}
-	// console.log('replayString', replayString);
-
-	const reviewId = metadata['review-id'];
-	// console.log('reviewId', reviewId, metadata);
-	const review: any = await mysql.query(`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`);
-	// console.log('review?', review, review == null, review != null && review.length);
-	if (review.length > 0) {
-		console.log('review already handled', reviewId, review);
-		return true;
-	}
 
 	const uploaderToken = 'overwolf-' + userId;
 	const deckstring = undefinedAsNull(metadata['deckstring']);
@@ -79,6 +69,21 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	// Flag that should ultimately go away when all versions are up to date
 	// const shouldZip = application === 'firestone' ? undefinedAsNull(metadata['should-zip']) : true;
 	const shouldStoreReplay = application === 'firestone' || gameMode === 'battlegrounds';
+	if (!shouldStoreReplay) {
+		console.log('not processing new replay', application, gameMode);
+		return false;
+	}
+
+	// console.log('replayString', replayString);
+
+	const reviewId = metadata['review-id'];
+	// console.log('reviewId', reviewId, metadata);
+	const review: any = await mysql.query(`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`);
+	// console.log('review?', review, review == null, review != null && review.length);
+	if (review.length > 0) {
+		console.log('review already handled', reviewId, review);
+		return true;
+	}
 
 	console.log('processing replay', reviewId, shouldStoreReplay, key, metadata);
 
