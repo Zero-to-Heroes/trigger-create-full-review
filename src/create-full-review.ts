@@ -77,15 +77,15 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const gameFormat = undefinedAsNull(metadata['game-format']);
 	const application = undefinedAsNull(metadata['application-key']);
 	// Flag that should ultimately go away when all versions are up to date
-	const shouldZip = application === 'firestone' ? undefinedAsNull(metadata['should-zip']) : true;
+	// const shouldZip = application === 'firestone' ? undefinedAsNull(metadata['should-zip']) : true;
+	const shouldStoreReplay = application === 'firestone' || gameMode === 'battlegrounds';
 
-	console.log('processing replay', reviewId, shouldZip, key, metadata);
+	console.log('processing replay', reviewId, shouldStoreReplay, key, metadata);
 
 	const today = new Date();
-	const replayKeySuffix = shouldZip ? '.xml.zip' : '';
-	const replayKey =
-		`hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}` +
-		replayKeySuffix;
+	const replayKey = shouldStoreReplay
+		? `hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}.xml.zip`
+		: null;
 	const creationDate = toCreationDate(today);
 	// console.log('creating with dates', today, reviewKey, creationDate, today.getDate());
 
@@ -110,10 +110,11 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 
 	// console.log('Writing file'), replayString;
-	if (shouldZip) {
+	if (shouldStoreReplay) {
 		await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
 	} else {
-		await s3.writeFile(replayString, 'xml.firestoneapp.com', replayKey, 'text/xml');
+		// await s3.writeFile(replayString, 'xml.firestoneapp.com', replayKey, 'text/xml');
+		// Stop s toring standard replays for Manastorm
 	}
 	console.log('file written to s3');
 
