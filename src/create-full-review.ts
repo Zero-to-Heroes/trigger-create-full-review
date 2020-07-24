@@ -45,6 +45,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 	// Only process reviews for me for now
 	const userId = metadata['user-key'];
+	const userName = metadata['username'];
 	// console.log('will process review?', userId, message);
 	// if (userId !== 'OW_2c40f5f0-4b1c-476a-98c0-d6ac63508d4b') {
 	// 	return false;
@@ -146,6 +147,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				opponentCardId,
 				opponentRank,
 				userId,
+				userName,
 				uploaderToken,
 				replayKey,
 				application
@@ -172,6 +174,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				${nullIfEmpty(opponentCardId)},
 				${nullIfEmpty(opponentRank)},
 				${nullIfEmpty(userId)},
+				${nullIfEmpty(userName)},
 				${nullIfEmpty(uploaderToken)},
 				${nullIfEmpty(replayKey)},
 				${nullIfEmpty(application)}
@@ -201,6 +204,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		opponentCardId: opponentCardId,
 		opponentRank: opponentRank,
 		userId: userId,
+		userName: userName,
 		uploaderToken: uploaderToken,
 		replayKey: replayKey,
 		application: application,
@@ -227,6 +231,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 			opponentCardId: opponentCardId,
 			opponentRank: opponentRank,
 			userId: userId,
+			userName: userName,
 			uploaderToken: uploaderToken,
 			replayKey: replayKey,
 			application: application,
