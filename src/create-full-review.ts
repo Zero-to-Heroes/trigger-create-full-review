@@ -88,9 +88,12 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 	console.log('processing replay', reviewId, shouldStoreReplay, key, metadata);
 
+	const inputReplayKey = undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
 	const replayKey = shouldStoreReplay
-		? `hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}.xml.zip`
+		? inputReplayKey
+			? inputReplayKey
+			: `hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}.xml.zip`
 		: null;
 	const creationDate = toCreationDate(today);
 	// console.log('creating with dates', today, reviewKey, creationDate, today.getDate());
@@ -246,7 +249,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 };
 
 const undefinedAsNull = (text: string): string => {
-	return text === 'undefined' || !text || text.length === 0 ? null : text;
+	return text === 'undefined' || text === 'null' || !text || text.length === 0 ? null : text;
 };
 
 const toCreationDate = (today: Date): string => {
@@ -257,5 +260,5 @@ const toCreationDate = (today: Date): string => {
 };
 
 const nullIfEmpty = (value: string): string => {
-	return value == null ? 'NULL' : `${SqlString.escape(value)}`;
+	return value == null || value == 'null' ? 'NULL' : `${SqlString.escape(value)}`;
 };
