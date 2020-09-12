@@ -63,13 +63,15 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const scenarioId = undefinedAsNull(metadata['scenario-id']);
 	const buildNumber = undefinedAsNull(metadata['build-number']);
 	const playerRank = undefinedAsNull(metadata['player-rank']);
+	const newPlayerRank = undefinedAsNull(metadata['new-player-rank']);
 	const opponentRank = undefinedAsNull(metadata['opponent-rank']);
 	const gameMode = undefinedAsNull(metadata['game-mode']);
 	const gameFormat = undefinedAsNull(metadata['game-format']);
 	const application = undefinedAsNull(metadata['application-key']);
 	// Flag that should ultimately go away when all versions are up to date
 	// const shouldZip = application === 'firestone' ? undefinedAsNull(metadata['should-zip']) : true;
-	const shouldStoreReplay = application === 'firestone' || gameMode === 'battlegrounds';
+	const shouldStoreReplay = application === 'firestone';
+	// || gameMode === 'battlegrounds';
 	if (!shouldStoreReplay) {
 		console.log('not processing new replay', application, gameMode);
 		return false;
@@ -143,6 +145,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				playerClass,
 				playerCardId,
 				playerRank,
+				newPlayerRank,
 				playerDeckName,
 				playerDecklist,
 				opponentName,
@@ -170,6 +173,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				${nullIfEmpty(playerClass)},
 				${nullIfEmpty(playerCardId)},
 				${nullIfEmpty(playerRank)},
+				${nullIfEmpty(newPlayerRank)},
 				${nullIfEmpty(playerDeckName)},
 				${nullIfEmpty(deckstring)},
 				${nullIfEmpty(opponentName)},
@@ -200,6 +204,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		playerClass: playerClass,
 		playerCardId: playerCardId,
 		playerRank: playerRank,
+		newPlayerRank: newPlayerRank,
 		playerDeckName: playerDeckName,
 		playerDecklist: deckstring,
 		opponentName: opponentName,
@@ -227,6 +232,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 			playerClass: playerClass,
 			playerCardId: playerCardId,
 			playerRank: playerRank,
+			newPlayerRank: newPlayerRank,
 			playerDeckName: playerDeckName,
 			playerDecklist: deckstring,
 			opponentName: opponentName,
