@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
 import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
@@ -190,7 +191,11 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	// console.log('will execute query', query);
 	await mysql.query(query);
 
-	sns.notifyReviewPublished({
+	// Store some data in match_stats
+	const bannedTribes = extractTribes(metadata['banned-races']);
+	const availableTribes = extractTribes(metadata['available-races']);
+
+	const reviewToNotify = {
 		reviewId: reviewId,
 		creationDate: creationDate,
 		gameMode: gameMode,
@@ -216,42 +221,28 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		uploaderToken: uploaderToken,
 		replayKey: replayKey,
 		application: application,
-	});
+		availableTribes: availableTribes,
+		bannedTribes: bannedTribes,
+	};
+	sns.notifyReviewPublished(reviewToNotify);
 	if (application === 'firestone') {
-		sns.notifyFirestoneReviewPublished({
-			reviewId: reviewId,
-			creationDate: creationDate,
-			gameMode: gameMode,
-			gameFormat: gameFormat,
-			buildNumber: buildNumber,
-			scenarioId: scenarioId,
-			result: result,
-			additionalResult: additionalResult,
-			coinPlay: playCoin,
-			playerName: playerName,
-			playerClass: playerClass,
-			playerCardId: playerCardId,
-			playerRank: playerRank,
-			newPlayerRank: newPlayerRank,
-			playerDeckName: playerDeckName,
-			playerDecklist: deckstring,
-			opponentName: opponentName,
-			opponentClass: opponentClass,
-			opponentCardId: opponentCardId,
-			opponentRank: opponentRank,
-			userId: userId,
-			userName: userName,
-			uploaderToken: uploaderToken,
-			replayKey: replayKey,
-			application: application,
-		});
+		sns.notifyFirestoneReviewPublished(reviewToNotify);
 	}
-	// } catch (e) {
-	// 	console.error('could not parse replay', replayString);
-	// 	// throw e;
-	// }
 
 	return true;
+};
+
+const extractTribes = (tribes: string): readonly Race[] => {
+	if (!tribes || tribes.length === 0 || tribes === 'undefined' || tribes === 'null') {
+		return null;
+	}
+	try {
+		const parsed: readonly string[] = JSON.parse(tribes);
+		return parsed.map(tribe => parseInt(tribe));
+	} catch (e) {
+		console.error('could not parse tribes', tribes, e);
+		return null;
+	}
 };
 
 const undefinedAsNull = (text: string): string => {
