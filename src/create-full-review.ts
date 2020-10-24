@@ -116,7 +116,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const playerCardId = replay.mainPlayerCardId;
 	const opponentCardId = replay.opponentPlayerCardId;
 	const result = replay.result;
-	const additionalResult = replay.additionalResult;
+	const additionalResult =
+		gameMode === 'battlegrounds' ? replay.additionalResult : undefinedAsNull(metadata['additional-result']);
 	const playCoin = replay.playCoin;
 	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
@@ -195,6 +196,12 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const bannedTribes = extractTribes(metadata['banned-races']);
 	const availableTribes = extractTribes(metadata['available-races']);
 
+	const currentDuelsRunId =
+		gameMode === 'duels'
+			? (await findCurrentDuelsRunId(mysql, additionalResult, userId, userName)) ??
+			  undefinedAsNull(metadata['duels-run-id'])
+			: null;
+
 	const reviewToNotify = {
 		reviewId: reviewId,
 		creationDate: creationDate,
@@ -223,6 +230,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		application: application,
 		availableTribes: availableTribes,
 		bannedTribes: bannedTribes,
+		currentDuelsRunId: currentDuelsRunId,
 	};
 	sns.notifyReviewPublished(reviewToNotify);
 	if (application === 'firestone') {
@@ -230,6 +238,52 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	}
 
 	return true;
+};
+
+const findCurrentDuelsRunId = async (
+	mysql,
+	additionalResult: string,
+	userId: string,
+	userName: string,
+): Promise<string> => {
+	const [wins, losses] = additionalResult ? additionalResult.split('-').map(parseInt) : [];
+	// New run
+	if (wins === 0 && losses === 0) {
+		console.log('new run, not finding duels run id');
+		return null;
+	}
+	const userCondition =
+		userName && userId
+			? ` AND userName = '${userName}' OR userId = '${userId}'`
+			: userName
+			? ` AND userName = '${userName}'`
+			: ` AND userId = '${userId}'`;
+	const query = `
+		SELECT reviewId, additionalResult FROM replay_summary
+		WHERE gameMode = 'duels'
+		${userCondition}
+		ORDER BY ID desc
+		LIMIT 1
+	`;
+	console.log('will run duels query', query);
+	const dbResult: any[] = await mysql.query(query);
+	const reviewId = dbResult && dbResult.length > 0 ? dbResult[0].reviewId : null;
+	if (!reviewId) {
+		return null;
+	}
+	const [existingWins, existingLosses] = dbResult[0].additionalResult
+		? dbResult[0].additionalResult.split('-').map(parseInt)
+		: [];
+	// If there is more wins or losses than what we have today, it's a new run as well
+	if (existingWins > wins || existingLosses > losses) {
+		return null;
+	}
+	const statQuery = `SELECT statValue FROM duels WHERE reviewId = '${reviewId}' AND statName = 'duels-run-id'`;
+	console.log('will run duels query 2', statQuery);
+	const duelsResults = await mysql.query(query);
+	const runId = duelsResults && duelsResults.length > 0 ? duelsResults[0].runId : null;
+	console.log('returning duels run id', runId);
+	return runId;
 };
 
 const extractTribes = (tribes: string): readonly Race[] => {
