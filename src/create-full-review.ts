@@ -231,6 +231,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		availableTribes: availableTribes,
 		bannedTribes: bannedTribes,
 		currentDuelsRunId: currentDuelsRunId,
+		appVersion: nullIfEmpty(undefinedAsNull(metadata['app-version'])),
 	};
 	sns.notifyReviewPublished(reviewToNotify);
 	if (application === 'firestone') {
