@@ -238,6 +238,14 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		sns.notifyFirestoneReviewPublished(reviewToNotify);
 	}
 
+	if (
+		['duels', 'paid-duels'].includes(gameMode) &&
+		['11-0', '11-1', '11-2'].includes(additionalResult) &&
+		result === 'won'
+	) {
+		sns.notifyDuels12winsReviewPublished(reviewToNotify);
+	}
+
 	return true;
 };
 
