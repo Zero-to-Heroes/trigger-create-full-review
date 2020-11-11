@@ -28,10 +28,7 @@ export default async (event): Promise<any> => {
 		.map(record => record.s3);
 
 	// console.log('s3infos', s3infos);
-	const previousConsole = console.log;
-	console.log = () => {};
 	await cards.initializeCardsDb();
-	console.log = previousConsole;
 	// console.log('cards initialized');
 	const mysql = await getConnection();
 	await Promise.all(s3infos.map(s3 => handleReplay(s3, mysql)));
@@ -198,8 +195,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 	const currentDuelsRunId =
 		gameMode === 'duels'
-			? (await findCurrentDuelsRunId(mysql, additionalResult, userId, userName)) ??
-			  undefinedAsNull(metadata['duels-run-id'])
+			? undefinedAsNull(metadata['duels-run-id']) ??
+			  (await findCurrentDuelsRunId(mysql, additionalResult, userId, userName))
 			: null;
 
 	const reviewToNotify = {
@@ -280,6 +277,7 @@ const findCurrentDuelsRunId = async (
 	if (!reviewId) {
 		return null;
 	}
+
 	const [existingWins, existingLosses] = dbResult[0].additionalResult
 		? dbResult[0].additionalResult.split('-').map(parseInt)
 		: [];
@@ -287,6 +285,7 @@ const findCurrentDuelsRunId = async (
 	if (existingWins > wins || existingLosses > losses) {
 		return null;
 	}
+
 	const statQuery = `SELECT statValue FROM duels WHERE reviewId = '${reviewId}' AND statName = 'duels-run-id'`;
 	console.log('will run duels query 2', statQuery);
 	const duelsResults = await mysql.query(query);
