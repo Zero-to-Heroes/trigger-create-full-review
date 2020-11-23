@@ -32,6 +32,7 @@ export default async (event): Promise<any> => {
 	// console.log('cards initialized');
 	const mysql = await getConnection();
 	await Promise.all(s3infos.map(s3 => handleReplay(s3, mysql)));
+	await mysql.end();
 	return { statusCode: 200, body: '' };
 };
 

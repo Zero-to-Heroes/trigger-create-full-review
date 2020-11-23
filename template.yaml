@@ -21,12 +21,18 @@ Resources:
         Properties:
             Handler: create-full-review.default
             Runtime: nodejs10.x
-            Timeout: 120
+            Timeout: 20
             CodeUri: ./dist/create-full-review
             MemorySize: 384 # Increase memory to be able to handle big games like BGS
             ReservedConcurrentExecutions: 40
             Tags:
                 LambdaName: trigger-create-full-review
+            # https://stackoverflow.com/questions/39144688/aws-lambda-invoke-not-calling-another-lambda-function-node-js
+            VpcConfig:
+                SecurityGroupIds:
+                    - sg-0ed63616362bf1a30
+                SubnetIds:
+                    - subnet-0b730ca9af74a95dd
             Policies:
                 - AWSLambdaBasicExecutionRole
                 - AWSLambdaVPCAccessExecutionRole
@@ -35,7 +41,7 @@ Resources:
                 - AmazonSNSFullAccess
                 - AmazonSQSFullAccess
                 - AmazonS3FullAccess
-                - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
+                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
             Events:
                 SQSReplayOnS3Event:
                     Type: SQS
