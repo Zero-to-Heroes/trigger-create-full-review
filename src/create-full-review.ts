@@ -195,11 +195,12 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const availableTribes = extractTribes(metadata['available-races']);
 
 	const currentDuelsRunId =
-		gameMode === 'duels'
+		gameMode === 'duels' || gameMode === 'paid-duels'
 			? undefinedAsNull(metadata['duels-run-id']) ??
-			  (await findCurrentDuelsRunId(mysql, additionalResult, userId, userName))
+			  (await findCurrentDuelsRunId(mysql, gameMode, additionalResult, userId, userName))
 			: null;
 
+	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
 	const reviewToNotify = {
 		reviewId: reviewId,
 		creationDate: creationDate,
@@ -229,7 +230,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		availableTribes: availableTribes,
 		bannedTribes: bannedTribes,
 		currentDuelsRunId: currentDuelsRunId,
-		appVersion: nullIfEmpty(undefinedAsNull(metadata['app-version'])),
+		appVersion: realNullIfEmpty(undefinedAsNull(metadata['app-version'])),
+		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
 	};
 	sns.notifyReviewPublished(reviewToNotify);
 	if (application === 'firestone') {
@@ -249,6 +251,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 const findCurrentDuelsRunId = async (
 	mysql,
+	gameMode: 'duels' | 'paid-duels',
 	additionalResult: string,
 	userId: string,
 	userName: string,
@@ -267,12 +270,12 @@ const findCurrentDuelsRunId = async (
 			: ` AND userId = '${userId}'`;
 	const query = `
 		SELECT reviewId, additionalResult FROM replay_summary
-		WHERE gameMode = 'duels'
+		WHERE gameMode = '${gameMode}'
 		${userCondition}
 		ORDER BY ID desc
 		LIMIT 1
 	`;
-	console.log('will run duels query', query);
+	console.log('will run duels query', gameMode, query);
 	const dbResult: any[] = await mysql.query(query);
 	const reviewId = dbResult && dbResult.length > 0 ? dbResult[0].reviewId : null;
 	if (!reviewId) {
@@ -321,4 +324,8 @@ const toCreationDate = (today: Date): string => {
 
 const nullIfEmpty = (value: string): string => {
 	return value == null || value == 'null' ? 'NULL' : `${SqlString.escape(value)}`;
+};
+
+const realNullIfEmpty = (value: string): string => {
+	return value == null || value == 'null' || value == 'NULL' ? null : `${SqlString.escape(value)}`;
 };
