@@ -17,7 +17,10 @@ export class S3 {
 				Key: key,
 			};
 			this.s3.getObject(params, (err, data) => {
-				resolve(data.Metadata);
+				if (!data) {
+					console.error('missing s3 file, skipping review');
+				}
+				resolve(data?.Metadata);
 			});
 		});
 	}

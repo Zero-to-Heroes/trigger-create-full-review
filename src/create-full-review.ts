@@ -37,15 +37,19 @@ export default async (event): Promise<any> => {
 };
 
 const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Promise<boolean> => {
+	console.log('will process review?', message);
 	const bucketName = message.bucket.name;
 	const key: string = message.object.key;
 
 	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
+	if (!metadata) {
+		console.error('No metadata for review', bucketName, key);
+		return false;
+	}
 
 	// Only process reviews for me for now
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
-	// console.log('will process review?', userId, message);
 	// if (userId !== 'OW_2c40f5f0-4b1c-476a-98c0-d6ac63508d4b') {
 	// 	return false;
 	// }
@@ -79,7 +83,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	// console.log('replayString', replayString);
 
 	const reviewId = metadata['review-id'];
-	// console.log('reviewId', reviewId, metadata);
+	console.log('reviewId', reviewId, metadata);
 	const review: any = await mysql.query(`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`);
 	// console.log('review?', review, review == null, review != null && review.length);
 	if (review.length > 0) {
@@ -99,7 +103,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const creationDate = toCreationDate(today);
 	// console.log('creating with dates', today, reviewKey, creationDate, today.getDate());
 
-	// console.log('preparing to parse replay');
+	console.log('preparing to parse replay');
 	// try {
 	let replay: Replay;
 	try {
@@ -190,10 +194,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	// console.log('will execute query', query);
 	await mysql.query(query);
 
-	// Store some data in match_stats
 	const bannedTribes = extractTribes(metadata['banned-races']);
 	const availableTribes = extractTribes(metadata['available-races']);
-
 	const currentDuelsRunId =
 		gameMode === 'duels' || gameMode === 'paid-duels'
 			? undefinedAsNull(metadata['duels-run-id']) ??
