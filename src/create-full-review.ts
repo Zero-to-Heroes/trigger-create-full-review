@@ -47,18 +47,15 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		return false;
 	}
 
-	// Only process reviews for me for now
+	console.log('processing review', metadata['review-id'], metadata);
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
-	// if (userId !== 'OW_2c40f5f0-4b1c-476a-98c0-d6ac63508d4b') {
-	// 	return false;
-	// }
-	// console.log('processing review', userId, message);
 	const replayString = await s3.readZippedContent(bucketName, key);
 	if (!replayString) {
 		console.error('Could not read file, not processing review', bucketName, key);
 		return false;
 	}
+	console.log('replay string read from s3', replayString.length);
 
 	const uploaderToken = 'overwolf-' + userId;
 	const deckstring = undefinedAsNull(metadata['deckstring']);
@@ -71,16 +68,10 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const gameMode = undefinedAsNull(metadata['game-mode']);
 	const gameFormat = undefinedAsNull(metadata['game-format']);
 	const application = undefinedAsNull(metadata['application-key']);
-	// Flag that should ultimately go away when all versions are up to date
-	// const shouldZip = application === 'firestone' ? undefinedAsNull(metadata['should-zip']) : true;
-	const shouldStoreReplay = application === 'firestone';
-	// || gameMode === 'battlegrounds';
-	if (!shouldStoreReplay) {
+	if (application !== 'firestone') {
 		console.log('not processing new replay', application, gameMode);
 		return false;
 	}
-
-	// console.log('replayString', replayString);
 
 	const reviewId = metadata['review-id'];
 	console.log('reviewId', reviewId, metadata);
@@ -91,20 +82,15 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		return true;
 	}
 
-	console.log('processing replay', reviewId, shouldStoreReplay, key, metadata);
-
+	console.log('processing replay', reviewId, key, metadata);
 	const inputReplayKey = undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
-	const replayKey = shouldStoreReplay
-		? inputReplayKey
-			? inputReplayKey
-			: `hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}.xml.zip`
-		: null;
+	const replayKey =
+		inputReplayKey ??
+		`hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}.xml.zip`;
 	const creationDate = toCreationDate(today);
-	// console.log('creating with dates', today, reviewKey, creationDate, today.getDate());
 
 	console.log('preparing to parse replay');
-	// try {
 	let replay: Replay;
 	try {
 		replay = parseHsReplayString(replayString);
@@ -124,13 +110,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 
-	// console.log('Writing file'), replayString;
-	if (shouldStoreReplay) {
-		await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	} else {
-		// await s3.writeFile(replayString, 'xml.firestoneapp.com', replayKey, 'text/xml');
-		// Stop s toring standard replays for Manastorm
-	}
+	console.log('Writing file'), replayString;
+	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
 	console.log('file written to s3');
 
 	const query = `
@@ -191,7 +172,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				${nullIfEmpty(application)}
 			)
 		`;
-	// console.log('will execute query', query);
 	await mysql.query(query);
 
 	const bannedTribes = extractTribes(metadata['banned-races']);
