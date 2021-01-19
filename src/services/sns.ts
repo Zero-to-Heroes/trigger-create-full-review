@@ -18,16 +18,16 @@ export class Sns {
 			.promise();
 	}
 
-	public async notifyFirestoneReviewPublished(review: any) {
-		const topic = 'arn:aws:sns:us-west-2:478062583808:review-published-firestone';
-		console.log('sending', review, 'to', topic);
-		await this.sns
-			.publish({
-				Message: JSON.stringify(review),
-				TopicArn: topic,
-			})
-			.promise();
-	}
+	// public async notifyFirestoneReviewPublished(review: any) {
+	// 	const topic = 'arn:aws:sns:us-west-2:478062583808:review-published-firestone';
+	// 	console.log('sending', review, 'to', topic);
+	// 	await this.sns
+	// 		.publish({
+	// 			Message: JSON.stringify(review),
+	// 			TopicArn: topic,
+	// 		})
+	// 		.promise();
+	// }
 
 	public async notifyDuels12winsReviewPublished(review: any) {
 		const topic = 'arn:aws:sns:us-west-2:478062583808:review-published-duels-12-wins';

@@ -216,9 +216,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
 	};
 	sns.notifyReviewPublished(reviewToNotify);
-	if (application === 'firestone') {
-		sns.notifyFirestoneReviewPublished(reviewToNotify);
-	}
+	// sns.notifyFirestoneReviewPublished(reviewToNotify);
 
 	if (
 		['duels', 'paid-duels'].includes(gameMode) &&
