@@ -226,6 +226,10 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		sns.notifyDuels12winsReviewPublished(reviewToNotify);
 	}
 
+	if (['ranked'].includes(gameMode)) {
+		sns.notifyRankedReviewPublished(reviewToNotify);
+	}
+
 	return true;
 };
 
