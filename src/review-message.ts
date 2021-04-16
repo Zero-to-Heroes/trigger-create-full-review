@@ -1,3 +1,5 @@
+import { GameFormatString } from '@firestone-hs/reference-data';
+
 export interface ReviewMessage {
 	readonly coinPlay: 'play' | 'coin';
 	readonly opponentClass: string;
@@ -15,7 +17,7 @@ export interface ReviewMessage {
 	readonly gameMode: string;
 	readonly creationDate: string;
 	readonly userId: string;
-	readonly gameFormat: string;
+	readonly gameFormat: GameFormatString;
 	readonly opponentCardId: string;
 	readonly playerCardId: string;
 	readonly uploaderToken: string;
