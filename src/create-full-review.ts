@@ -218,12 +218,14 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	sns.notifyReviewPublished(reviewToNotify);
 	// sns.notifyFirestoneReviewPublished(reviewToNotify);
 
-	if (
-		['duels', 'paid-duels'].includes(gameMode) &&
-		['11-0', '11-1', '11-2'].includes(additionalResult) &&
-		result === 'won'
-	) {
-		sns.notifyDuels12winsReviewPublished(reviewToNotify);
+	console.log('will handle duels?', gameMode, additionalResult, ['duels', 'paid-duels'].includes(gameMode));
+	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
+		const [wins, losses] = additionalResult.split('-').map(info => parseInt(info));
+		console.log('handling duels', additionalResult, wins, losses, additionalResult.split('-'), result);
+		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
+			console.log('notifying duels deck review', wins);
+			sns.notifyDuels12winsReviewPublished(reviewToNotify);
+		}
 	}
 
 	if (['ranked'].includes(gameMode)) {
