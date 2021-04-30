@@ -8,10 +8,12 @@ import { AllCardsService } from './services/cards';
 import { getConnection } from './services/rds';
 import { S3 } from './services/s3';
 import { Sns } from './services/sns';
+import { Sqs } from './services/sqs';
 import serverlessMysql = require('serverless-mysql');
 
 const s3 = new S3();
 const sns = new Sns();
+const sqs = new Sqs();
 const cards = new AllCardsService();
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
@@ -215,10 +217,9 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		appVersion: realNullIfEmpty(undefinedAsNull(metadata['app-version'])),
 		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
 	};
-	sns.notifyReviewPublished(reviewToNotify);
-	// sns.notifyFirestoneReviewPublished(reviewToNotify);
 
-	console.log('will handle duels?', gameMode, additionalResult, ['duels', 'paid-duels'].includes(gameMode));
+	sqs.sendMessageToQueue(reviewToNotify, process.env.SQS_RANKED_REVIEW_PUBLISHED);
+
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		const [wins, losses] = additionalResult.split('-').map(info => parseInt(info));
 		console.log('handling duels', additionalResult, wins, losses, additionalResult.split('-'), result);
@@ -228,9 +229,11 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		}
 	}
 
-	if (['ranked'].includes(gameMode)) {
-		sns.notifyRankedReviewPublished(reviewToNotify);
-	}
+	// only for categorize deck, will be reactivated later
+	// if (['ranked'].includes(gameMode)) {
+	// 	// sns.notifyRankedReviewPublished(reviewToNotify);
+	// 	sqs.sendMessageToQueue(reviewToNotify, process.env.SQS_RANKED_REVIEW_PUBLISHED);
+	// }
 
 	return true;
 };
