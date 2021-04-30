@@ -18,18 +18,14 @@ const cards = new AllCardsService();
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
 export default async (event): Promise<any> => {
-	// console.log('event', JSON.stringify(event, null, 4));
 	const messages = event.Records.map(record => record.body).map(msg => JSON.parse(msg));
-	// console.log('messages', messages);
 	const s3infos = messages
 		.map(msg => JSON.parse(msg.Message))
 		.map(msg => msg.Records)
 		.reduce((a, b) => a.concat(b), [])
 		.map(record => record.s3);
 
-	// console.log('s3infos', s3infos);
 	await cards.initializeCardsDb();
-	// console.log('cards initialized');
 	const mysql = await getConnection();
 	await Promise.all(s3infos.map(s3 => handleReplay(s3, mysql)));
 	await mysql.end();
@@ -37,7 +33,6 @@ export default async (event): Promise<any> => {
 };
 
 const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Promise<boolean> => {
-	console.log('will process review?', message);
 	const bucketName = message.bucket.name;
 	const key: string = message.object.key;
 
@@ -47,7 +42,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		return false;
 	}
 
-	console.log('processing review', metadata['review-id'], metadata);
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
 	const replayString = await s3.readZippedContent(bucketName, key);
@@ -55,7 +49,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		console.error('Could not read file, not processing review', bucketName, key);
 		return false;
 	}
-	console.log('replay string read from s3', replayString.length);
 
 	const uploaderToken = 'overwolf-' + userId;
 	const deckstring = undefinedAsNull(metadata['deckstring']);
@@ -69,20 +62,15 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const gameFormat = undefinedAsNull(metadata['game-format']);
 	const application = undefinedAsNull(metadata['application-key']);
 	if (application !== 'firestone') {
-		console.log('not processing new replay', application, gameMode);
 		return false;
 	}
 
 	const reviewId = metadata['review-id'];
-	console.log('reviewId', reviewId, metadata);
 	const review: any = await mysql.query(`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`);
-	// console.log('review?', review, review == null, review != null && review.length);
 	if (review.length > 0) {
-		console.log('review already handled', reviewId, review);
 		return true;
 	}
 
-	console.log('processing replay', reviewId, key, metadata);
 	const inputReplayKey = undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
 	const replayKey =
@@ -90,7 +78,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		`hearthstone/replay/${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}/${v4()}.xml.zip`;
 	const creationDate = toCreationDate(today);
 
-	console.log('preparing to parse replay');
 	let replay: Replay;
 	try {
 		replay = parseHsReplayString(replayString);
@@ -98,7 +85,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		console.error('Could not parse replay', e, message);
 		return false;
 	}
-	console.log('replay parsed');
 	const playerName = replay.mainPlayerName;
 	const opponentName = replay.opponentPlayerName;
 	const playerCardId = replay.mainPlayerCardId;
@@ -112,7 +98,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 	console.log('Writing file'), replayString;
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	console.log('file written to s3');
 
 	const query = `
 			INSERT INTO replay_summary
@@ -220,9 +205,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		const [wins, losses] = additionalResult.split('-').map(info => parseInt(info));
-		console.log('handling duels', additionalResult, wins, losses, additionalResult.split('-'), result);
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
-			console.log('notifying duels deck review', wins);
 			sqs.sendMessageToQueue(reviewToNotify, process.env.SQS_DUELS_HIGH_WINS_REVIEW_PUBLISHED);
 		}
 	}
@@ -245,7 +228,6 @@ const findCurrentDuelsRunId = async (
 	const [wins, losses] = additionalResult ? additionalResult.split('-').map(parseInt) : [];
 	// New run
 	if (wins === 0 && losses === 0) {
-		console.log('new run, not finding duels run id');
 		return null;
 	}
 	const userCondition =
@@ -261,7 +243,6 @@ const findCurrentDuelsRunId = async (
 		ORDER BY ID desc
 		LIMIT 1
 	`;
-	console.log('will run duels query', gameMode, query);
 	const dbResult: any[] = await mysql.query(query);
 	const reviewId = dbResult && dbResult.length > 0 ? dbResult[0].reviewId : null;
 	if (!reviewId) {
@@ -277,10 +258,8 @@ const findCurrentDuelsRunId = async (
 	}
 
 	const statQuery = `SELECT statValue FROM duels WHERE reviewId = '${reviewId}' AND statName = 'duels-run-id'`;
-	console.log('will run duels query 2', statQuery);
 	const duelsResults = await mysql.query(query);
 	const runId = duelsResults && duelsResults.length > 0 ? duelsResults[0].runId : null;
-	console.log('returning duels run id', runId);
 	return runId;
 };
 
