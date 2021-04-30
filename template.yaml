@@ -10,12 +10,18 @@ Globals:
             Variables:
                 # TODO: at some point change this queue name, it is not "ranked only"
                 SQS_RANKED_REVIEW_PUBLISHED: !Ref RankedReviewPublishedQueue
+                SQS_DUELS_HIGH_WINS_REVIEW_PUBLISHED: !Ref DuelsHighWinsReviewPublishedQueue
 
 Resources:
     RankedReviewPublishedQueue:
         Type: AWS::SQS::Queue
         Properties:
             QueueName: ranked-review-published-queue
+            VisibilityTimeout: 601
+    DuelsHighWinsReviewPublishedQueue:
+        Type: AWS::SQS::Queue
+        Properties:
+            QueueName: duels-high-wins-review-published-queue
             VisibilityTimeout: 601
     PopulateGameSummaryFunction:
         Type: AWS::Serverless::Function
