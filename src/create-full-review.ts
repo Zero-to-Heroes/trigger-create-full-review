@@ -162,10 +162,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const bannedTribes = extractTribes(metadata['banned-races']);
 	const availableTribes = extractTribes(metadata['available-races']);
 	const currentDuelsRunId =
-		gameMode === 'duels' || gameMode === 'paid-duels'
-			? undefinedAsNull(metadata['duels-run-id']) ??
-			  (await findCurrentDuelsRunId(mysql, gameMode, additionalResult, userId, userName))
-			: null;
+		gameMode === 'duels' || gameMode === 'paid-duels' ? undefinedAsNull(metadata['duels-run-id']) : null;
 
 	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
 	const reviewToNotify = {
@@ -214,51 +211,6 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	}
 
 	return true;
-};
-
-const findCurrentDuelsRunId = async (
-	mysql,
-	gameMode: 'duels' | 'paid-duels',
-	additionalResult: string,
-	userId: string,
-	userName: string,
-): Promise<string> => {
-	const [wins, losses] = additionalResult ? additionalResult.split('-').map(parseInt) : [];
-	// New run
-	if (wins === 0 && losses === 0) {
-		return null;
-	}
-	const userCondition =
-		userName && userId
-			? ` AND userName = '${userName}' OR userId = '${userId}'`
-			: userName
-			? ` AND userName = '${userName}'`
-			: ` AND userId = '${userId}'`;
-	const query = `
-		SELECT reviewId, additionalResult FROM replay_summary
-		WHERE gameMode = '${gameMode}'
-		${userCondition}
-		ORDER BY ID desc
-		LIMIT 1
-	`;
-	const dbResult: any[] = await mysql.query(query);
-	const reviewId = dbResult && dbResult.length > 0 ? dbResult[0].reviewId : null;
-	if (!reviewId) {
-		return null;
-	}
-
-	const [existingWins, existingLosses] = dbResult[0].additionalResult
-		? dbResult[0].additionalResult.split('-').map(parseInt)
-		: [];
-	// If there is more wins or losses than what we have today, it's a new run as well
-	if (existingWins > wins || existingLosses > losses) {
-		return null;
-	}
-
-	const statQuery = `SELECT statValue FROM duels WHERE reviewId = '${reviewId}' AND statName = 'duels-run-id'`;
-	const duelsResults = await mysql.query(query);
-	const runId = duelsResults && duelsResults.length > 0 ? duelsResults[0].runId : null;
-	return runId;
 };
 
 const extractTribes = (tribes: string): readonly Race[] => {
