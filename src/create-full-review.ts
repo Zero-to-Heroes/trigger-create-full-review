@@ -126,7 +126,9 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				userName,
 				uploaderToken,
 				replayKey,
-				application
+				application,
+				realXpGain,
+				levelAfterMatch
 			)
 			VALUES
 			(
@@ -154,7 +156,9 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				${nullIfEmpty(userName)},
 				${nullIfEmpty(uploaderToken)},
 				${nullIfEmpty(replayKey)},
-				${nullIfEmpty(application)}
+				${nullIfEmpty(application)},
+				${nullIfEmpty(metadata['real-xp-gamed'])},
+				${nullIfEmpty(metadata['level-after-match'])}
 			)
 		`;
 	await mysql.query(query);
