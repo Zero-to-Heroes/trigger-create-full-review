@@ -1,6 +1,6 @@
 {
 	"name": "trigger-create-full-review",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "",
 	"scripts": {
 		"lint": "eslint --color --fix --ext .ts .",
