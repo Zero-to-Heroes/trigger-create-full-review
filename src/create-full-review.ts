@@ -165,8 +165,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 	const bannedTribes = extractTribes(metadata['banned-races']);
 	const availableTribes = extractTribes(metadata['available-races']);
-	const currentDuelsRunId =
-		gameMode === 'duels' || gameMode === 'paid-duels' ? undefinedAsNull(metadata['duels-run-id']) : null;
+	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
 
 	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
 	const reviewToNotify = {
@@ -197,7 +196,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		application: application,
 		availableTribes: availableTribes,
 		bannedTribes: bannedTribes,
-		currentDuelsRunId: currentDuelsRunId,
+		currentDuelsRunId: runId,
+		runId: runId,
 		appVersion: realNullIfEmpty(undefinedAsNull(metadata['app-version'])),
 		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
 	};
