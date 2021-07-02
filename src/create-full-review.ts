@@ -95,6 +95,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	const playCoin = replay.playCoin;
 	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
+	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
 
 	console.log('Writing file'), replayString;
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
@@ -128,7 +129,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				replayKey,
 				application,
 				realXpGain,
-				levelAfterMatch
+				levelAfterMatch,
+				bgsHasPrizes
 			)
 			VALUES
 			(
@@ -158,7 +160,8 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 				${nullIfEmpty(replayKey)},
 				${nullIfEmpty(application)},
 				${nullIfEmpty(metadata['real-xp-gamed'])},
-				${nullIfEmpty(metadata['level-after-match'])}
+				${nullIfEmpty(metadata['level-after-match'])},
+				${bgsHasPrizes ? 1 : 0}
 			)
 		`;
 	await mysql.query(query);
@@ -200,6 +203,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		runId: runId,
 		appVersion: realNullIfEmpty(undefinedAsNull(metadata['app-version'])),
 		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
+		bgsHasPrizes: bgsHasPrizes,
 	};
 	sns.notifyReviewPublished(reviewToNotify);
 
