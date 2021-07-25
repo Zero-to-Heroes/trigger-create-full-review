@@ -214,6 +214,10 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		}
 	}
 
+	if (gameMode === 'paid-duels' && playerRank) {
+		sns.notifyDuelsReviewPublished(reviewToNotify);
+	}
+
 	if (['ranked'].includes(gameMode)) {
 		sns.notifyRankedReviewPublished(reviewToNotify);
 	}

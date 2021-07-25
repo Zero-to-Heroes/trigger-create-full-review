@@ -29,6 +29,18 @@ export class Sns {
 
 	public async notifyDuels12winsReviewPublished(review: any) {
 		const topic = process.env.DUELS_HIGH_WINS_REVIEW_PUBLISHED_SNS_TOPIC;
+		console.log('sending', review, 'to', topic);
+		await this.sns
+			.publish({
+				Message: JSON.stringify(review),
+				TopicArn: topic,
+			})
+			.promise();
+	}
+
+	public async notifyDuelsReviewPublished(review: any) {
+		const topic = process.env.DUELS_REVIEW_PUBLISHED_SNS_TOPIC;
+		console.log('sending', review, 'to', topic);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),

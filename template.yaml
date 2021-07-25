@@ -11,6 +11,7 @@ Globals:
                 REVIEW_PUBLISHED_SNS_TOPIC: !Ref ReviewPublishedSnsTopic
                 RANKED_REVIEW_PUBLISHED_SNS_TOPIC: !Ref RankedReviewPublishedSnsTopic
                 DUELS_HIGH_WINS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsHighWinsReviewPublishedSnsTopic
+                DUELS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsReviewPublishedSnsTopic
 
 Resources:
     ReviewPublishedSnsTopic:
@@ -28,6 +29,12 @@ Resources:
         Properties:
             TopicName: 'duels-high-wins-review-published'
             DisplayName: 'duels-high-wins-review-published'
+    DuelsReviewPublishedSnsTopic:
+        Type: AWS::SNS::Topic
+        Properties:
+            TopicName: 'duels-review-published'
+            DisplayName: 'duels-review-published'
+
     PopulateGameSummaryFunction:
         Type: AWS::Serverless::Function
         Properties:
