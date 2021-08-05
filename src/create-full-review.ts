@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
-import { Race } from '@firestone-hs/reference-data';
+import { AllCardsService, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
 import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
-import { AllCardsService } from './services/cards';
+// import { AllCardsService } from './services/cards';
 import { getConnection } from './services/rds';
 import { S3 } from './services/s3';
 import { Sns } from './services/sns';
@@ -26,13 +26,11 @@ export default async (event): Promise<any> => {
 		.map(record => record.s3);
 
 	await cards.initializeCardsDb();
-	const mysql = await getConnection();
-	await Promise.all(s3infos.map(s3 => handleReplay(s3, mysql)));
-	await mysql.end();
+	await Promise.all(s3infos.map(s3 => handleReplay(s3)));
 	return { statusCode: 200, body: '' };
 };
 
-const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Promise<boolean> => {
+const handleReplay = async (message): Promise<boolean> => {
 	const bucketName = message.bucket.name;
 	const key: string = message.object.key;
 
@@ -50,6 +48,11 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 		return false;
 	}
 
+	// if (replayString.includes(CardIds.Collectible.Rogue.MaestraOfTheMasquerade)) {
+	// 	console.error('Maestra games not supported yet', metadata, message, replayString);
+	// 	throw new Error('Maestra games not supported yet');
+	// }
+
 	const uploaderToken = 'overwolf-' + userId;
 	const deckstring = undefinedAsNull(metadata['deckstring']);
 	const playerDeckName = undefinedAsNull(metadata['deck-name']);
@@ -66,6 +69,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 	}
 
 	const reviewId = metadata['review-id'];
+	const mysql = await getConnection();
 	const review: any = await mysql.query(`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`);
 	if (review.length > 0) {
 		return true;
@@ -80,7 +84,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 
 	let replay: Replay;
 	try {
-		replay = parseHsReplayString(replayString);
+		replay = parseHsReplayString(replayString, cards as any);
 	} catch (e) {
 		console.error('Could not parse replay', e, message);
 		return false;
@@ -165,6 +169,7 @@ const handleReplay = async (message, mysql: serverlessMysql.ServerlessMysql): Pr
 			)
 		`;
 	await mysql.query(query);
+	await mysql.end();
 
 	const bannedTribes = extractTribes(metadata['banned-races']);
 	const availableTribes = extractTribes(metadata['available-races']);
