@@ -217,10 +217,11 @@ const handleReplay = async (message): Promise<boolean> => {
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
 			sns.notifyDuels12winsReviewPublished(reviewToNotify);
 		}
-	}
 
-	if (['duels', 'paid-duels'].includes(gameMode) && playerRank) {
 		sns.notifyDuelsReviewPublished(reviewToNotify);
+		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost')) {
+			sns.notifyDuelsRunEndPublished(reviewToNotify);
+		}
 	}
 
 	if (['ranked'].includes(gameMode)) {

@@ -12,6 +12,7 @@ Globals:
                 RANKED_REVIEW_PUBLISHED_SNS_TOPIC: !Ref RankedReviewPublishedSnsTopic
                 DUELS_HIGH_WINS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsHighWinsReviewPublishedSnsTopic
                 DUELS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsReviewPublishedSnsTopic
+                DUELS_RUN_END_PUBLISHED_SNS_TOPIC: !Ref DuelsRunEndPublishedSnsTopic
 
 Resources:
     ReviewPublishedSnsTopic:
@@ -29,6 +30,11 @@ Resources:
         Properties:
             TopicName: 'duels-high-wins-review-published'
             DisplayName: 'duels-high-wins-review-published'
+    DuelsRunEndPublishedSnsTopic:
+        Type: AWS::SNS::Topic
+        Properties:
+            TopicName: 'duels-run-end-published'
+            DisplayName: 'duels-run-end-published'
     DuelsReviewPublishedSnsTopic:
         Type: AWS::SNS::Topic
         Properties:
