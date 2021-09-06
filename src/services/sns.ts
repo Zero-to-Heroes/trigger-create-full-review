@@ -27,9 +27,19 @@ export class Sns {
 			.promise();
 	}
 
+	public async notifyBattlegroundsReviewPublished(review: any) {
+		const topic = process.env.BATTLEGROUNDS_REVIEW_PUBLISHED_SNS_TOPIC;
+		console.log('publishing BG review', topic, review);
+		await this.sns
+			.publish({
+				Message: JSON.stringify(review),
+				TopicArn: topic,
+			})
+			.promise();
+	}
+
 	public async notifyDuels12winsReviewPublished(review: any) {
 		const topic = process.env.DUELS_HIGH_WINS_REVIEW_PUBLISHED_SNS_TOPIC;
-		console.log('sending', review, 'to', topic);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),
@@ -40,7 +50,6 @@ export class Sns {
 
 	public async notifyDuelsReviewPublished(review: any) {
 		const topic = process.env.DUELS_REVIEW_PUBLISHED_SNS_TOPIC;
-		console.log('sending', review, 'to', topic);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),
@@ -51,7 +60,6 @@ export class Sns {
 
 	public async notifyDuelsRunEndPublished(review: any) {
 		const topic = process.env.DUELS_RUN_END_PUBLISHED_SNS_TOPIC;
-		console.log('sending', review, 'to', topic);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),

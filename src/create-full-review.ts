@@ -222,10 +222,10 @@ const handleReplay = async (message): Promise<boolean> => {
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost')) {
 			sns.notifyDuelsRunEndPublished(reviewToNotify);
 		}
-	}
-
-	if (['ranked'].includes(gameMode)) {
+	} else if (['ranked'].includes(gameMode)) {
 		sns.notifyRankedReviewPublished(reviewToNotify);
+	} else if (['battlegrounds'].includes(gameMode)) {
+		sns.notifyBattlegroundsReviewPublished(reviewToNotify);
 	}
 
 	return true;
