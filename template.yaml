@@ -54,7 +54,7 @@ Resources:
             Runtime: nodejs10.x
             Timeout: 40
             CodeUri: ./dist/create-full-review
-            MemorySize: 384 # Increase memory to be able to handle big games like BGS
+            MemorySize: 512 # Increase memory to be able to handle big games like BGS
             ReservedConcurrentExecutions: 40
             Tags:
                 LambdaName: trigger-create-full-review
