@@ -38,6 +38,17 @@ export class Sns {
 			.promise();
 	}
 
+	public async notifyMercenariesReviewPublished(review: any) {
+		const topic = process.env.MERCENARIES_REVIEW_PUBLISHED_SNS_TOPIC;
+		console.log('publishing BG review', topic, review);
+		await this.sns
+			.publish({
+				Message: JSON.stringify(review),
+				TopicArn: topic,
+			})
+			.promise();
+	}
+
 	public async notifyDuels12winsReviewPublished(review: any) {
 		const topic = process.env.DUELS_HIGH_WINS_REVIEW_PUBLISHED_SNS_TOPIC;
 		await this.sns
