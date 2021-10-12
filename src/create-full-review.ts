@@ -42,6 +42,10 @@ const handleReplay = async (message): Promise<boolean> => {
 
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
+	const debug = userName === 'daedin';
+	if (debug) {
+		console.log('porocessing', message);
+	}
 	const replayString = await s3.readZippedContent(bucketName, key);
 	if (!replayString) {
 		console.error('Could not read file, not processing review', bucketName, key);

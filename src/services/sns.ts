@@ -40,7 +40,7 @@ export class Sns {
 
 	public async notifyMercenariesReviewPublished(review: any) {
 		const topic = process.env.MERCENARIES_REVIEW_PUBLISHED_SNS_TOPIC;
-		console.log('publishing BG review', topic, review);
+		console.log('publishing mercs review', topic, review);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),
