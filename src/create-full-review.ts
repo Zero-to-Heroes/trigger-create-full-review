@@ -94,7 +94,7 @@ const handleReplay = async (message): Promise<boolean> => {
 		return false;
 	}
 	const playerName = replay.mainPlayerName;
-	const opponentName = replay.opponentPlayerName;
+	const opponentName = undefinedAsNull(metadata['force-opponent-name']) ?? replay.opponentPlayerName;
 	const playerCardId = replay.mainPlayerCardId;
 	const opponentCardId = replay.opponentPlayerCardId;
 	const result = replay.result;
@@ -104,6 +104,7 @@ const handleReplay = async (message): Promise<boolean> => {
 	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
+	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
 
 	console.log('Writing file'), replayString;
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
@@ -138,7 +139,9 @@ const handleReplay = async (message): Promise<boolean> => {
 				application,
 				realXpGain,
 				levelAfterMatch,
-				bgsHasPrizes
+				bgsHasPrizes,
+				mercsBountyId,
+				runId
 			)
 			VALUES
 			(
@@ -169,7 +172,9 @@ const handleReplay = async (message): Promise<boolean> => {
 				${nullIfEmpty(application)},
 				${nullIfEmpty(metadata['real-xp-gamed'])},
 				${nullIfEmpty(metadata['level-after-match'])},
-				${bgsHasPrizes ? 1 : 0}
+				${bgsHasPrizes ? 1 : 0},
+				${nullIfEmpty(metadata['mercs-bounty-id'])},
+				${nullIfEmpty(runId)}
 			)
 		`;
 	await mysql.query(query);
@@ -177,7 +182,6 @@ const handleReplay = async (message): Promise<boolean> => {
 
 	const bannedTribes = extractTribes(metadata['banned-races']);
 	const availableTribes = extractTribes(metadata['available-races']);
-	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
 
 	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
 	const reviewToNotify = {
