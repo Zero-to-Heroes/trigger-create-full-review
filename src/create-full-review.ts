@@ -214,9 +214,12 @@ const handleReplay = async (message): Promise<boolean> => {
 		bannedTribes: bannedTribes,
 		currentDuelsRunId: runId,
 		runId: runId,
-		appVersion: realNullIfEmpty(undefinedAsNull(metadata['app-version'])),
+		appVersion: undefinedAsNull(metadata['app-version']),
 		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
 		bgsHasPrizes: bgsHasPrizes,
+		mercBountyId: undefinedAsNull(metadata['mercs-bounty-id'])
+			? +undefinedAsNull(metadata['mercs-bounty-id'])
+			: null,
 	};
 	sns.notifyReviewPublished(reviewToNotify);
 
