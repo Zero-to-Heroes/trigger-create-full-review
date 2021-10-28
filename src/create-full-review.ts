@@ -239,11 +239,11 @@ const handleReplay = async (message): Promise<boolean> => {
 		sns.notifyBattlegroundsReviewPublished(reviewToNotify);
 	} else if (
 		[
-			'mercenaries-pve',
+			// 'mercenaries-pve',
 			'mercenaries-pvp',
-			'mercenaries-pve-coop',
-			'mercenaries-ai-vs-ai',
-			'mercenaries-friendly',
+			// 'mercenaries-pve-coop',
+			// 'mercenaries-ai-vs-ai',
+			// 'mercenaries-friendly',
 		].includes(gameMode)
 	) {
 		sns.notifyMercenariesReviewPublished(reviewToNotify);
