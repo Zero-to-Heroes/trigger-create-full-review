@@ -19,6 +19,7 @@ const connect = async (): Promise<serverlessMysql.ServerlessMysql> => {
 		database: 'replay_summary',
 		port: secret.port,
 	};
+	// console.log('creating connection', config);
 	connection = MySQLServerless({ config });
 
 	return connection;
