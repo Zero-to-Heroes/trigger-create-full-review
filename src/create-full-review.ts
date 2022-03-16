@@ -141,7 +141,8 @@ const handleReplay = async (message): Promise<boolean> => {
 				levelAfterMatch,
 				bgsHasPrizes,
 				mercsBountyId,
-				runId
+				runId,
+				region
 			)
 			VALUES
 			(
@@ -174,7 +175,8 @@ const handleReplay = async (message): Promise<boolean> => {
 				${nullIfEmpty(metadata['level-after-match'])},
 				${bgsHasPrizes ? 1 : 0},
 				${nullIfEmpty(metadata['mercs-bounty-id'])},
-				${nullIfEmpty(runId)}
+				${nullIfEmpty(runId)},
+				${replay.region}
 			)
 		`;
 	await mysql.query(query);
@@ -220,6 +222,7 @@ const handleReplay = async (message): Promise<boolean> => {
 		mercBountyId: undefinedAsNull(metadata['mercs-bounty-id'])
 			? +undefinedAsNull(metadata['mercs-bounty-id'])
 			: null,
+		region: replay.region,
 	};
 	sns.notifyReviewPublished(reviewToNotify);
 
