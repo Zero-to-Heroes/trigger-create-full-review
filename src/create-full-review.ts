@@ -106,7 +106,7 @@ const handleReplay = async (message): Promise<boolean> => {
 	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
 	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
 
-	console.log('Writing file'), replayString;
+	console.log('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
 
 	const query = `
