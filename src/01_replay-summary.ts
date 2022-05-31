@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
-import { AllCardsService, Race } from '@firestone-hs/reference-data';
+import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
 import SqlString from 'sqlstring';
+import { ReplayInfo } from './create-full-review';
 import { v4 } from 'uuid';
 // import { AllCardsService } from './services/cards';
 import { getConnection } from './services/rds';
 import { S3 } from './services/s3';
 import { Sns } from './services/sns';
 import serverlessMysql = require('serverless-mysql');
+import { ReviewMessage } from './review-message';
 
 export const saveReplayInReplaySummary = async (
 	message,
@@ -51,7 +53,7 @@ export const saveReplayInReplaySummary = async (
 	const newPlayerRank = undefinedAsNull(metadata['new-player-rank']);
 	const opponentRank = undefinedAsNull(metadata['opponent-rank']);
 	const gameMode = undefinedAsNull(metadata['game-mode']);
-	const gameFormat = undefinedAsNull(metadata['game-format']);
+	const gameFormat: GameFormatString = undefinedAsNull(metadata['game-format']) as GameFormatString;
 	const application = undefinedAsNull(metadata['application-key']);
 	if (application !== 'firestone') {
 		return null;
@@ -59,12 +61,9 @@ export const saveReplayInReplaySummary = async (
 
 	const reviewId = metadata['review-id'];
 	const mysql = await getConnection();
-	const review: any = await mysql.query(`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`);
-	if (review.length > 0) {
-		return {
-			userName: userName,
-		};
-	}
+	const existingReviewResult: any[] = await mysql.query(
+		`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`,
+	);
 
 	const inputReplayKey = undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
@@ -80,8 +79,10 @@ export const saveReplayInReplaySummary = async (
 		console.error('Could not parse replay', e, message);
 		return null;
 	}
+
 	const playerName = replay.mainPlayerName;
-	const opponentName = undefinedAsNull(metadata['force-opponent-name']) ?? replay.opponentPlayerName;
+	const opponentName =
+		undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ?? replay.opponentPlayerName;
 	const playerCardId = replay.mainPlayerCardId;
 	const opponentCardId = replay.opponentPlayerCardId;
 	const result = replay.result;
@@ -92,6 +93,57 @@ export const saveReplayInReplaySummary = async (
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
 	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
+	const bannedTribes = extractTribes(metadata['banned-races']);
+	const availableTribes = extractTribes(metadata['available-races']);
+	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
+
+	const reviewToNotify: ReviewMessage = {
+		reviewId: reviewId,
+		creationDate: creationDate,
+		gameMode: gameMode,
+		gameFormat: gameFormat,
+		buildNumber: +buildNumber,
+		scenarioId: scenarioId,
+		result: result,
+		additionalResult: additionalResult,
+		coinPlay: playCoin,
+		playerName: playerName,
+		playerClass: playerClass,
+		playerCardId: playerCardId,
+		playerRank: playerRank,
+		newPlayerRank: newPlayerRank,
+		playerDeckName: playerDeckName,
+		playerDecklist: deckstring,
+		opponentName: opponentName,
+		opponentClass: opponentClass,
+		opponentCardId: opponentCardId,
+		opponentRank: opponentRank,
+		userId: userId,
+		userName: userName,
+		uploaderToken: uploaderToken,
+		replayKey: replayKey,
+		application: application,
+		availableTribes: availableTribes,
+		bannedTribes: bannedTribes,
+		currentDuelsRunId: runId,
+		runId: runId,
+		appVersion: undefinedAsNull(metadata['app-version']),
+		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
+		bgsHasPrizes: bgsHasPrizes,
+		mercBountyId: undefinedAsNull(metadata['mercs-bounty-id'])
+			? +undefinedAsNull(metadata['mercs-bounty-id'])
+			: null,
+		region: replay.region,
+	};
+
+	if (existingReviewResult.length > 0) {
+		return {
+			userName: userName,
+			replay: replay,
+			reviewMessage: reviewToNotify,
+			replayString: replayString,
+		};
+	}
 
 	console.log('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
@@ -168,64 +220,29 @@ export const saveReplayInReplaySummary = async (
 		`;
 	await mysql.query(query);
 	await mysql.end();
-
-	const bannedTribes = extractTribes(metadata['banned-races']);
-	const availableTribes = extractTribes(metadata['available-races']);
-
-	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
-	const reviewToNotify = {
-		reviewId: reviewId,
-		creationDate: creationDate,
-		gameMode: gameMode,
-		gameFormat: gameFormat,
-		buildNumber: buildNumber,
-		scenarioId: scenarioId,
-		result: result,
-		additionalResult: additionalResult,
-		coinPlay: playCoin,
-		playerName: playerName,
-		playerClass: playerClass,
-		playerCardId: playerCardId,
-		playerRank: playerRank,
-		newPlayerRank: newPlayerRank,
-		playerDeckName: playerDeckName,
-		playerDecklist: deckstring,
-		opponentName: opponentName,
-		opponentClass: opponentClass,
-		opponentCardId: opponentCardId,
-		opponentRank: opponentRank,
-		userId: userId,
-		userName: userName,
-		uploaderToken: uploaderToken,
-		replayKey: replayKey,
-		application: application,
-		availableTribes: availableTribes,
-		bannedTribes: bannedTribes,
-		currentDuelsRunId: runId,
-		runId: runId,
-		appVersion: undefinedAsNull(metadata['app-version']),
-		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
-		bgsHasPrizes: bgsHasPrizes,
-		mercBountyId: undefinedAsNull(metadata['mercs-bounty-id'])
-			? +undefinedAsNull(metadata['mercs-bounty-id'])
-			: null,
-		region: replay.region,
-	};
+	// trigger-build-match-stats, trigger-sync-data
+	// TODO: move to 'ranked' only
 	sns.notifyReviewPublished(reviewToNotify);
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
+		// duels-leaderboard
+		sns.notifyDuelsReviewPublished(reviewToNotify);
+
 		const [wins, losses] = additionalResult.split('-').map(info => parseInt(info));
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
+			// trigger-build-duels-12-wins
 			sns.notifyDuels12winsReviewPublished(reviewToNotify);
 		}
 
-		sns.notifyDuelsReviewPublished(reviewToNotify);
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost')) {
+			// trigger-build-duels-run-stats
 			sns.notifyDuelsRunEndPublished(reviewToNotify);
 		}
 	} else if (['ranked'].includes(gameMode)) {
-		sns.notifyRankedReviewPublished(reviewToNotify);
+		// For deck categorization only
+		// sns.notifyRankedReviewPublished(reviewToNotify);
 	} else if (['battlegrounds'].includes(gameMode)) {
+		// trigger-build-bgs-run-stats
 		sns.notifyBattlegroundsReviewPublished(reviewToNotify);
 	} else if (
 		[
@@ -236,11 +253,15 @@ export const saveReplayInReplaySummary = async (
 			// 'mercenaries-friendly',
 		].includes(gameMode)
 	) {
+		// trigger-build-mercenaries-match-stats
 		sns.notifyMercenariesReviewPublished(reviewToNotify);
 	}
 
 	return {
 		userName: userName,
+		replay: replay,
+		reviewMessage: reviewToNotify,
+		replayString: replayString,
 	};
 };
 
@@ -275,7 +296,3 @@ const nullIfEmpty = (value: string): string => {
 const realNullIfEmpty = (value: string): string => {
 	return value == null || value == 'null' || value == 'NULL' ? null : `${SqlString.escape(value)}`;
 };
-
-export interface ReplayInfo {
-	readonly userName: string;
-}

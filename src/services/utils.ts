@@ -30,4 +30,18 @@ async function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export const toCreationDate = (today: Date): string => {
+	return `${today
+		.toISOString()
+		.slice(0, 19)
+		.replace('T', ' ')}.${today.getMilliseconds()}`;
+};
+
+export const formatDate = (today: Date): string => {
+	return `${today
+		.toISOString()
+		.slice(0, 19)
+		.replace('T', ' ')}.000000`;
+};
+
 export { partitionArray, http, sleep };
