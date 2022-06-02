@@ -20,14 +20,14 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		console.log('no end position', message);
 		return;
 	}
-	if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
-		console.log('no player rank', message);
-		return;
-	}
-	if (!message.availableTribes?.length) {
-		console.log('no available tribes', message);
-		return;
-	}
+	// if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
+	// 	console.log('no player rank', message);
+	// 	return;
+	// }
+	// if (!message.availableTribes?.length) {
+	// 	console.log('no available tribes', message);
+	// 	return;
+	// }
 
 	// Handling skins
 	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
@@ -37,16 +37,16 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	// Because there is a race, the combat winrate might have been populated first
 	const combatWinrate = await retrieveCombatWinrate(message, mysqlBgs);
 	console.log('retrieved combat winrate?', combatWinrate);
-
+	const playerRank = message.playerRank ?? message.newPlayerRank;
 	const row: InternalBgsRow = {
 		creationDate: new Date(message.creationDate),
 		buildNumber: message.buildNumber,
 		reviewId: message.reviewId,
 		rank: parseInt(message.additionalResult),
 		heroCardId: heroCardId,
-		rating: parseInt(message.playerRank),
+		rating: playerRank == null ? null : parseInt(playerRank),
 		tribes: message.availableTribes
-			.map(tribe => tribe.toString())
+			?.map(tribe => tribe.toString())
 			.sort()
 			.join(','),
 		darkmoonPrizes: false,
