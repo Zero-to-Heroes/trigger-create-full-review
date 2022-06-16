@@ -7,7 +7,6 @@ import SqlString from 'sqlstring';
 import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
 import { getConnection } from './services/rds';
-import { getConnection as getConnectionBgs } from './services/rds-bgs';
 import { S3 } from './services/s3';
 
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, s3: S3): Promise<void> => {
@@ -34,8 +33,8 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 
 	const warbandStats = await buildWarbandStats(replayInfo);
 	// Because there is a race, the combat winrate might have been populated first
-	const mysqlBgs = await getConnectionBgs();
-	const combatWinrate = await retrieveCombatWinrate(message, mysqlBgs);
+	const mysql = await getConnection();
+	const combatWinrate = await retrieveCombatWinrate(message, mysql);
 	console.log('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
 	const row: InternalBgsRow = {
@@ -83,10 +82,8 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		)
 	`;
 	console.log('running query', insertQuery);
-	const mysql = await getConnection();
 	await mysql.query(insertQuery);
 	await mysql.end();
-	await mysqlBgs.end();
 };
 
 const buildWarbandStats = async (replayInfo: ReplayInfo): Promise<readonly InternalWarbandStats[]> => {
@@ -108,14 +105,14 @@ const buildWarbandStats = async (replayInfo: ReplayInfo): Promise<readonly Inter
 
 const retrieveCombatWinrate = async (
 	message: ReviewMessage,
-	mysqlBgs: ServerlessMysql,
+	mysql: ServerlessMysql,
 ): Promise<readonly InternalCombatWinrate[]> => {
 	const query = `
 		SELECT * FROM bgs_single_run_stats
 		WHERE reviewId = '${message.reviewId}'
 	`;
 	console.log('running query', query);
-	const results: any[] = await mysqlBgs.query(query);
+	const results: any[] = await mysql.query(query);
 	console.log('results', results);
 	if (!results?.length) {
 		return null;
