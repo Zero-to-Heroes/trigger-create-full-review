@@ -28,16 +28,20 @@ export const saveReplayInReplaySummary = async (
 	}, 56000);
 
 	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
+	debugLogs.push('got metadata', metadata);
 	if (!metadata) {
 		console.error('No metadata for review', bucketName, key);
+		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
 	const replayString = await s3.readZippedContent(bucketName, key);
+	debugLogs.push('got replayString', bucketName, key);
 	if (!replayString) {
 		console.error('Could not read file, not processing review', bucketName, key);
+		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
@@ -58,6 +62,7 @@ export const saveReplayInReplaySummary = async (
 	const gameFormat: GameFormatString = undefinedAsNull(metadata['game-format']) as GameFormatString;
 	const application = undefinedAsNull(metadata['application-key']);
 	if (application !== 'firestone') {
+		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
@@ -66,6 +71,7 @@ export const saveReplayInReplaySummary = async (
 	const existingReviewResult: any[] = await mysql.query(
 		`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`,
 	);
+	debugLogs.push('got existingReviewResult');
 
 	const inputReplayKey = undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
@@ -79,9 +85,11 @@ export const saveReplayInReplaySummary = async (
 		replay = parseHsReplayString(replayString, cards as any);
 	} catch (e) {
 		console.error('Could not parse replay', e, message);
+		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
+	debugLogs.push('got parseHsReplayString');
 	const playerName = replay.mainPlayerName;
 	const opponentName =
 		undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ?? replay.opponentPlayerName;
@@ -140,14 +148,16 @@ export const saveReplayInReplaySummary = async (
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
-	debugLogs.push('porocessing', message);
+	debugLogs.push('built review message', message);
 
 	if (existingReviewResult.length > 0) {
+		!!timeout && clearTimeout(timeout);
 		return {
 			userName: userName,
 			replay: replay,
 			reviewMessage: reviewToNotify,
 			replayString: replayString,
+			bgsPostMatchStats: null,
 		};
 	}
 
@@ -274,6 +284,7 @@ export const saveReplayInReplaySummary = async (
 		replay: replay,
 		reviewMessage: reviewToNotify,
 		replayString: replayString,
+		bgsPostMatchStats: null,
 	};
 };
 

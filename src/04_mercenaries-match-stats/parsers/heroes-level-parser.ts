@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { Element } from 'elementtree';
-import { MercenariesReferenceData } from '../../04_mercenaries-match-stats';
+import { MercenariesReferenceData } from '../../040_mercenaries-match-stats';
 import { normalizeMercCardId } from '../../hs-utils';
 import { Parser, ParsingStructure } from '../mercs-replay-crawler';
 

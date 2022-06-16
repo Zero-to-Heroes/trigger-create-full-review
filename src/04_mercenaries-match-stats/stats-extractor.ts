@@ -1,6 +1,6 @@
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
-import { MercenariesReferenceData } from '../04_mercenaries-match-stats';
+import { MercenariesReferenceData } from '../040_mercenaries-match-stats';
 import { ReviewMessage } from '../review-message';
 import { mercsHeroesInfosExtractor } from './heroes-info-extractor';
 import { Stat } from './stat';

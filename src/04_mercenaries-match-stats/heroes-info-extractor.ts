@@ -10,7 +10,7 @@ import { isMercenaries } from '../hs-utils';
 import { Stat } from './stat';
 import { ReviewMessage } from '../review-message';
 import { OpponentHeroesTimingParser } from './parsers/opponent-heroes-timing-parser';
-import { MercenariesReferenceData } from '../04_mercenaries-match-stats';
+import { MercenariesReferenceData } from '../040_mercenaries-match-stats';
 
 export const mercsHeroesInfosExtractor = async (
 	message: ReviewMessage,

@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 // import serverlessMysql = require('serverless-mysql');
 // import { buildMatchStats } from './02_match-stats';
-import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { BgsPostMatchStats, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
-import { saveReplayInReplaySummary } from './01_replay-summary';
-import { buildMatchStats } from './02_match-stats';
-import { buildBgsRunStats } from './03_bgs-run-stats';
-import { buildMercenariesMatchStats } from './04_mercenaries-match-stats';
-import { updateDuelsLeaderboard } from './05_duels-leaderboard';
-import { handleDuelsHighWins } from './06_duels-high-wins';
-import { handleDuelsRunEnd } from './07_duels-run-end';
+import { saveReplayInReplaySummary } from './010_replay-summary';
+import { buildMatchStats } from './020_match-stats';
+import { buildBgsRunStats } from './030_bgs-run-stats';
+import { buildBgsPostMatchStats } from './035_bgs-post-match-stats';
+import { buildMercenariesMatchStats } from './040_mercenaries-match-stats';
+import { updateDuelsLeaderboard } from './050_duels-leaderboard';
+import { handleDuelsHighWins } from './060_duels-high-wins';
+import { handleDuelsRunEnd } from './070_duels-run-end';
 import { ReviewMessage } from './review-message';
 import { S3 } from './services/s3';
 import { Sns } from './services/sns';
@@ -42,6 +43,7 @@ const handleReplay = async (message): Promise<boolean> => {
 			await buildMatchStats(replayInfo);
 			if (['battlegrounds'].includes(replayInfo.reviewMessage.gameMode)) {
 				await buildBgsRunStats(replayInfo, cards, s3);
+				await buildBgsPostMatchStats(replayInfo, cards, s3);
 			} else if (['mercenaries-pvp'].includes(replayInfo.reviewMessage.gameMode)) {
 				await buildMercenariesMatchStats(replayInfo, cards);
 			} else if (
@@ -74,4 +76,5 @@ export interface ReplayInfo {
 	readonly replay: Replay;
 	readonly reviewMessage: ReviewMessage;
 	readonly replayString: string;
+	bgsPostMatchStats: BgsPostMatchStats;
 }

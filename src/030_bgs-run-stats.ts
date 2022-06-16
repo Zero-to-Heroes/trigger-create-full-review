@@ -93,6 +93,7 @@ const buildWarbandStats = async (replayInfo: ReplayInfo): Promise<readonly Inter
 	try {
 		const replayString = replayInfo.replayString;
 		const stats = parseBattlegroundsGame(replayString, null, null, null);
+		replayInfo.bgsPostMatchStats = stats;
 		const result = stats.totalStatsOverTurn.map(stat => ({
 			turn: stat.turn,
 			totalStats: stat.value,
