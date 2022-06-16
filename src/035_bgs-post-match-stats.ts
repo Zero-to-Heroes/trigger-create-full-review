@@ -7,7 +7,6 @@ import SqlString from 'sqlstring';
 import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
 import { getConnection } from './services/rds';
-import { getConnection as getConnectionBgs } from './services/rds-bgs';
 import { S3 } from './services/s3';
 
 export const buildBgsPostMatchStats = async (
