@@ -31,6 +31,7 @@ export interface ReviewMessage {
 	readonly currentDuelsRunId: string;
 	readonly runId: string;
 	readonly appVersion: string;
+	readonly appChannel: string;
 	readonly normalizedXpGained: number;
 	readonly bgsHasPrizes: boolean;
 	readonly mercBountyId: number;

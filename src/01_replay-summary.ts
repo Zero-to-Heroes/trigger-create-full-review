@@ -3,14 +3,13 @@ import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
 import SqlString from 'sqlstring';
-import { ReplayInfo } from './create-full-review';
 import { v4 } from 'uuid';
+import { ReplayInfo } from './create-full-review';
+import { ReviewMessage } from './review-message';
 // import { AllCardsService } from './services/cards';
 import { getConnection } from './services/rds';
 import { S3 } from './services/s3';
 import { Sns } from './services/sns';
-import serverlessMysql = require('serverless-mysql');
-import { ReviewMessage } from './review-message';
 
 export const saveReplayInReplaySummary = async (
 	message,
@@ -21,6 +20,13 @@ export const saveReplayInReplaySummary = async (
 	const bucketName = message.bucket.name;
 	const key: string = message.object.key;
 
+	// The lambda randomly times out, and I haven't yet been able to find out why
+	const debugLogs = [];
+	const timeout = setTimeout(() => {
+		console.error('will timeout');
+		debugLogs.forEach(log => console.log(log));
+	}, 56000);
+
 	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
 	if (!metadata) {
 		console.error('No metadata for review', bucketName, key);
@@ -29,10 +35,6 @@ export const saveReplayInReplaySummary = async (
 
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
-	const debug = userName === 'daedin';
-	if (debug) {
-		console.log('porocessing', message);
-	}
 	const replayString = await s3.readZippedContent(bucketName, key);
 	if (!replayString) {
 		console.error('Could not read file, not processing review', bucketName, key);
@@ -128,6 +130,7 @@ export const saveReplayInReplaySummary = async (
 		currentDuelsRunId: runId,
 		runId: runId,
 		appVersion: undefinedAsNull(metadata['app-version']),
+		appChannel: undefinedAsNull(metadata['app-channel']),
 		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
 		bgsHasPrizes: bgsHasPrizes,
 		mercBountyId: undefinedAsNull(metadata['mercs-bounty-id'])
@@ -135,6 +138,9 @@ export const saveReplayInReplaySummary = async (
 			: null,
 		region: replay.region,
 	};
+
+	const debug = reviewToNotify.appChannel === 'beta';
+	debugLogs.push('porocessing', message);
 
 	if (existingReviewResult.length > 0) {
 		return {
@@ -147,6 +153,7 @@ export const saveReplayInReplaySummary = async (
 
 	console.log('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
+	debugLogs.push('file written');
 
 	const query = `
 			INSERT INTO replay_summary
@@ -218,8 +225,11 @@ export const saveReplayInReplaySummary = async (
 				${replay.region}
 			)
 		`;
+	debugLogs.push('running query', query);
 	await mysql.query(query);
+	debugLogs.push('ran query');
 	await mysql.end();
+	debugLogs.push('closed connection');
 	// trigger-build-match-stats, trigger-sync-data
 	// TODO: move to 'ranked' only
 	sns.notifyReviewPublished(reviewToNotify);
@@ -256,7 +266,9 @@ export const saveReplayInReplaySummary = async (
 		// trigger-build-mercenaries-match-stats
 		sns.notifyMercenariesReviewPublished(reviewToNotify);
 	}
+	debugLogs.push('notifs sent');
 
+	!!timeout && clearTimeout(timeout);
 	return {
 		userName: userName,
 		replay: replay,

@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { AllCardsService } from '@firestone-hs/reference-data';
-import { saveReplayInReplaySummary } from './01_replay-summary';
-import { S3 } from './services/s3';
-import { Sns } from './services/sns';
 // import serverlessMysql = require('serverless-mysql');
 // import { buildMatchStats } from './02_match-stats';
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { AllCardsService } from '@firestone-hs/reference-data';
+import { saveReplayInReplaySummary } from './01_replay-summary';
 import { buildMatchStats } from './02_match-stats';
-import { ReviewMessage } from './review-message';
 import { buildBgsRunStats } from './03_bgs-run-stats';
 import { buildMercenariesMatchStats } from './04_mercenaries-match-stats';
 import { updateDuelsLeaderboard } from './05_duels-leaderboard';
 import { handleDuelsHighWins } from './06_duels-high-wins';
 import { handleDuelsRunEnd } from './07_duels-run-end';
+import { ReviewMessage } from './review-message';
+import { S3 } from './services/s3';
+import { Sns } from './services/sns';
 
 const s3 = new S3();
 const sns = new Sns();
@@ -37,7 +37,7 @@ export default async (event): Promise<any> => {
 const handleReplay = async (message): Promise<boolean> => {
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
-		if (replayInfo.userName === 'daedin') {
+		if (replayInfo.userName === 'daedin' || replayInfo.reviewMessage.appChannel === 'beta') {
 			console.log('new process');
 			await buildMatchStats(replayInfo);
 			if (['battlegrounds'].includes(replayInfo.reviewMessage.gameMode)) {

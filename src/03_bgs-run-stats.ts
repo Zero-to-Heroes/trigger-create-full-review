@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
+import { inflate } from 'pako';
+import { ServerlessMysql } from 'serverless-mysql';
+import SqlString from 'sqlstring';
+import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
 import { getConnection } from './services/rds';
 import { getConnection as getConnectionBgs } from './services/rds-bgs';
-import { ReplayInfo } from './create-full-review';
-import SqlString from 'sqlstring';
 import { S3 } from './services/s3';
-import { ServerlessMysql } from 'serverless-mysql';
-import { inflate } from 'pako';
-import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, s3: S3): Promise<void> => {
 	const message = replayInfo.reviewMessage;
@@ -32,9 +32,9 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	// Handling skins
 	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
 
-	const mysqlBgs = await getConnectionBgs();
 	const warbandStats = await buildWarbandStats(replayInfo);
 	// Because there is a race, the combat winrate might have been populated first
+	const mysqlBgs = await getConnectionBgs();
 	const combatWinrate = await retrieveCombatWinrate(message, mysqlBgs);
 	console.log('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
