@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { getConnection, logger, S3 } from '@firestone-hs/aws-lambda-utils';
 import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
@@ -6,9 +7,6 @@ import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
 import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
-// import { AllCardsService } from './services/cards';
-import { getConnection } from './services/rds';
-import { S3 } from './services/s3';
 import { Sns } from './services/sns';
 
 export const saveReplayInReplaySummary = async (
@@ -23,14 +21,14 @@ export const saveReplayInReplaySummary = async (
 	// The lambda randomly times out, and I haven't yet been able to find out why
 	const debugLogs = [];
 	const timeout = setTimeout(() => {
-		console.error('will timeout');
-		debugLogs.forEach(log => console.log(log));
+		logger.error('will timeout');
+		debugLogs.forEach(log => logger.log(log));
 	}, 56000);
 
 	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
 	debugLogs.push('got metadata', metadata);
 	if (!metadata) {
-		console.error('No metadata for review', bucketName, key);
+		logger.error('No metadata for review', bucketName, key);
 		!!timeout && clearTimeout(timeout);
 		return null;
 	}
@@ -40,13 +38,13 @@ export const saveReplayInReplaySummary = async (
 	const replayString = await s3.readZippedContent(bucketName, key);
 	debugLogs.push('got replayString', bucketName, key);
 	if (!replayString) {
-		console.error('Could not read file, not processing review', bucketName, key);
+		logger.error('Could not read file, not processing review', bucketName, key);
 		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
 	// if (replayString.includes(CardIds.Collectible.Rogue.MaestraOfTheMasquerade)) {
-	// 	console.error('Maestra games not supported yet', metadata, message, replayString);
+	// 	logger.error('Maestra games not supported yet', metadata, message, replayString);
 	// 	throw new Error('Maestra games not supported yet');
 	// }
 
@@ -84,7 +82,7 @@ export const saveReplayInReplaySummary = async (
 	try {
 		replay = parseHsReplayString(replayString, cards as any);
 	} catch (e) {
-		console.error('Could not parse replay', e, message);
+		logger.error('Could not parse replay', e, message);
 		!!timeout && clearTimeout(timeout);
 		return null;
 	}
@@ -161,7 +159,7 @@ export const saveReplayInReplaySummary = async (
 		};
 	}
 
-	console.log('Writing file', reviewId);
+	logger.log('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
 	debugLogs.push('file written');
 
@@ -296,7 +294,7 @@ const extractTribes = (tribes: string): readonly Race[] => {
 		const parsed: readonly string[] = JSON.parse(tribes);
 		return parsed.map(tribe => parseInt(tribe));
 	} catch (e) {
-		console.error('could not parse tribes', tribes, e);
+		logger.error('could not parse tribes', tribes, e);
 		return null;
 	}
 };

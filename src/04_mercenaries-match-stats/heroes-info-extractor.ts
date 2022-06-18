@@ -1,16 +1,17 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { logger } from '@firestone-hs/aws-lambda-utils';
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
+import { MercenariesReferenceData } from '../040_mercenaries-match-stats';
+import { isMercenaries } from '../hs-utils';
+import { ReviewMessage } from '../review-message';
+import { crawlMercsGame } from './mercs-replay-crawler';
 import { HeroesEquipmentParser } from './parsers/heroes-equipment-parser';
 import { HeroesLevelParser } from './parsers/heroes-level-parser';
-import { HeroesTimingParser } from './parsers/heroes-timing-parser';
-import { crawlMercsGame } from './mercs-replay-crawler';
 import { HeroesSkillsParser } from './parsers/heroes-skill-parser';
-import { isMercenaries } from '../hs-utils';
-import { Stat } from './stat';
-import { ReviewMessage } from '../review-message';
+import { HeroesTimingParser } from './parsers/heroes-timing-parser';
 import { OpponentHeroesTimingParser } from './parsers/opponent-heroes-timing-parser';
-import { MercenariesReferenceData } from '../040_mercenaries-match-stats';
+import { Stat } from './stat';
 
 export const mercsHeroesInfosExtractor = async (
 	message: ReviewMessage,
@@ -19,14 +20,14 @@ export const mercsHeroesInfosExtractor = async (
 	allCards: AllCardsService,
 	mercenariesReferenceData: MercenariesReferenceData,
 ): Promise<readonly Stat[]> => {
-	// console.log('will extract', isMercenaries(message.gameMode), message.gameMode);
+	// logger.log('will extract', isMercenaries(message.gameMode), message.gameMode);
 	if (!isMercenaries(message.gameMode)) {
 		return null;
 	}
 
-	console.log('replay mainPlayerId', replay.mainPlayerId);
+	logger.log('replay mainPlayerId', replay.mainPlayerId);
 	const heroesInfos = heroesInfosExtractor(replay, allCards, mercenariesReferenceData);
-	// console.log('heroesTiming', heroesTiming);
+	// logger.log('heroesTiming', heroesTiming);
 
 	return [
 		...Object.keys(heroesInfos.timings).map(

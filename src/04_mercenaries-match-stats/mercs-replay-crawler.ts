@@ -79,7 +79,7 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				),
 			};
 			// if (structure.entities[element.get('id')].cardType === CardType.HERO) {
-			// 	console.debug('hero', structure.entities[element.get('id')]);
+			// 	logger.debug('hero', structure.entities[element.get('id')]);
 			// }
 		}
 		if (structure.entities[element.get('entity')]) {

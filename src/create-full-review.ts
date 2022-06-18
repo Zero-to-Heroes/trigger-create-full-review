@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-// import serverlessMysql = require('serverless-mysql');
-// import { buildMatchStats } from './02_match-stats';
+import { logBeforeTimeout, logger, S3 } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { saveReplayInReplaySummary } from './010_replay-summary';
@@ -12,7 +11,6 @@ import { updateDuelsLeaderboard } from './050_duels-leaderboard';
 import { handleDuelsHighWins } from './060_duels-high-wins';
 import { handleDuelsRunEnd } from './070_duels-run-end';
 import { ReviewMessage } from './review-message';
-import { S3 } from './services/s3';
 import { Sns } from './services/sns';
 
 const s3 = new S3();
@@ -22,7 +20,8 @@ const cards = new AllCardsService();
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
-export default async (event): Promise<any> => {
+export default async (event, context): Promise<any> => {
+	const cleanup = logBeforeTimeout(context);
 	const messages = event.Records.map(record => record.body).map(msg => JSON.parse(msg));
 	const s3infos = messages
 		.map(msg => JSON.parse(msg.Message))
@@ -32,6 +31,7 @@ export default async (event): Promise<any> => {
 
 	await cards.initializeCardsDb();
 	await Promise.all(s3infos.map(s3 => handleReplay(s3)));
+	cleanup();
 	return { statusCode: 200, body: '' };
 };
 
@@ -39,7 +39,7 @@ const handleReplay = async (message): Promise<boolean> => {
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
 		if (replayInfo.userName === 'daedin' || replayInfo.reviewMessage.appChannel === 'beta') {
-			console.log('new process');
+			logger.log('new process');
 			await buildMatchStats(replayInfo);
 			if (['battlegrounds'].includes(replayInfo.reviewMessage.gameMode)) {
 				await buildBgsRunStats(replayInfo, cards, s3);

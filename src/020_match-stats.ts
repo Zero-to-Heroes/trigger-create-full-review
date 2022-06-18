@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { getConnection } from '@firestone-hs/aws-lambda-utils';
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
-import { Stat } from './02_match-stats/stat';
-import { ReplayInfo } from './create-full-review';
-import { ReviewMessage } from './review-message';
-import { getConnection } from './services/rds';
 import SqlString from 'sqlstring';
 import { bgTribesExtractor } from './02_match-stats/battlegrounds/bg-tribes-extractor';
 import { bgsHeroPickExtractor } from './02_match-stats/battlegrounds/hero-pick-extractor';
 import { duelsRunIdExtractor } from './02_match-stats/duels/duels-run-id-extractor';
 import { gameDurationExtractor } from './02_match-stats/game-duration-extractor';
+import { Stat } from './02_match-stats/stat';
 import { normalizedXpGainedExtractor } from './02_match-stats/xp-gained-extractor';
+import { ReplayInfo } from './create-full-review';
+import { ReviewMessage } from './review-message';
 
 export const buildMatchStats = async (replayInfo: ReplayInfo) => {
 	const message = replayInfo.reviewMessage;
@@ -48,7 +48,7 @@ export const buildMatchStats = async (replayInfo: ReplayInfo) => {
 	// and the mercenaries table at the same time
 
 	const validStats = statsFromGame.filter(stat => stat);
-	// console.log('validStats', validStats);
+	// logger.log('validStats', validStats);
 	const mysql = await getConnection();
 	if (validStats.length > 0) {
 		const escape = SqlString.escape;
@@ -68,7 +68,7 @@ export const buildMatchStats = async (replayInfo: ReplayInfo) => {
 			WHERE
 				reviewId = ${escape(emptyAsNull(reviewId))}
 		`;
-		// console.log('running second query', additionalQuery2);
+		// logger.log('running second query', additionalQuery2);
 		await mysql.query(additionalQuery2);
 	}
 	await mysql.end();

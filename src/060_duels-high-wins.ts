@@ -1,17 +1,17 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, GameFormat } from '@firestone-hs/reference-data';
+import { DeckDefinition, decode, encode } from 'deckstrings';
 import { DeckStat } from './06_duels-high-wins/deck-stat';
 import { ReplayInfo } from './create-full-review';
-import { getConnection } from './services/rds';
 import { formatDate, toCreationDate } from './services/utils';
-import { DeckDefinition, decode, encode } from 'deckstrings';
 
 export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCardsService) => {
 	const message = replayInfo.reviewMessage;
-	console.log('handling message', message);
+	logger.log('handling message', message);
 	const runId = message.currentDuelsRunId;
 	if (!runId) {
-		console.error('runId empty', message);
+		logger.error('runId empty', message);
 		return;
 	}
 
@@ -39,7 +39,7 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 	// Discard the info if multiple classes are in the same run
 	const uniqueHeroes = [...new Set(allDecksResults.map(result => result.playerCardId))];
 	if (uniqueHeroes.length !== 1) {
-		console.error('corrupted run', runId, uniqueHeroes);
+		logger.error('corrupted run', runId, uniqueHeroes);
 		await mysql.end();
 		return;
 	}
@@ -60,7 +60,7 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 	const finalDecklist = message.playerDecklist;
 	const [wins, losses] = message.additionalResult.split('-').map(info => parseInt(info));
 	if (wins < 10) {
-		console.error('invalid number of wins', message.additionalResult);
+		logger.error('invalid number of wins', message.additionalResult);
 		await mysql.end();
 		return null;
 	}
@@ -74,7 +74,7 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 	}
 
 	const rating = allDecksResults.find(result => result.playerRank != null)?.playerRank;
-	console.log('rating', rating, allDecksResults);
+	logger.log('rating', rating, allDecksResults);
 	const stat = {
 		periodStart: periodDate,
 		playerClass: firstGameInRun.playerClass,
@@ -120,7 +120,7 @@ const cleanDecklist = (initialDecklist: string, playerCardId: string, cards: All
 	const decoded = decode(initialDecklist);
 	const validCards = decoded.cards.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible);
 	if (validCards.length !== 15) {
-		console.error('Invalid deck list', initialDecklist, decoded);
+		logger.error('Invalid deck list', initialDecklist, decoded);
 		return null;
 	}
 	const hero = getHero(playerCardId, cards);

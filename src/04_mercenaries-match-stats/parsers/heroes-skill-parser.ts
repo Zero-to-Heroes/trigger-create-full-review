@@ -29,7 +29,7 @@ export class HeroesSkillsParser implements Parser {
 
 	populate = (structure: ParsingStructure, replay: Replay) => {
 		return (currentTurn: number) => {
-			// console.log('populate', this.heroesForThisTurn);
+			// logger.log('populate', this.heroesForThisTurn);
 			for (const abilityCardId of this.abilitiesPlayedThisTurn) {
 				this.abilitiesPlayedThisMatch[abilityCardId] = (this.abilitiesPlayedThisMatch[abilityCardId] ?? 0) + 1;
 			}

@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { getConnection, http, logger } from '@firestone-hs/aws-lambda-utils';
 import { extractTotalTurns, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, ScenarioId } from '@firestone-hs/reference-data';
+import SqlString from 'sqlstring';
 import { Stat } from './04_mercenaries-match-stats/stat';
 import { extractStats } from './04_mercenaries-match-stats/stats-extractor';
 import { ReplayInfo } from './create-full-review';
 import { getCardLevel, isMercenaries, normalizeMercCardId } from './hs-utils';
-import { http } from './services/utils';
-import SqlString from 'sqlstring';
-import { getConnection } from './services/rds';
 import { ReviewMessage } from './review-message';
 
 let mercenariesReferenceData: MercenariesReferenceData = null;
@@ -32,7 +31,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		return;
 	}
 
-	console.log(
+	logger.log(
 		'processing',
 		message,
 		// scenarioId === ScenarioId.LETTUCE_MAP_PVE ? isNaN(parseInt(message.mercBountyId as any)) : null,
@@ -42,15 +41,15 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		const strReferenceData = await http(
 			`https://static.zerotoheroes.com/hearthstone/data/mercenaries-data.json?v=3`,
 		);
-		// console.log('found reference data', strReferenceData?.length);
+		// logger.log('found reference data', strReferenceData?.length);
 		mercenariesReferenceData = JSON.parse(strReferenceData);
-		// console.log('parsed reference data', mercenariesReferenceData);
+		// logger.log('parsed reference data', mercenariesReferenceData);
 	}
 
 	const replay: Replay = replayInfo.replay;
 	const numberOfTurns = extractTotalTurns(replay);
 	if (numberOfTurns <= 3) {
-		console.log('game too short, not including it for stats', numberOfTurns);
+		logger.log('game too short, not including it for stats', numberOfTurns);
 		return;
 	}
 
@@ -63,7 +62,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 	);
 
 	if (!statsFromGame.filter(stat => stat.statName === 'mercs-hero-timing').length) {
-		// console.log('no hero timings, returning', statsFromGame);
+		// logger.log('no hero timings, returning', statsFromGame);
 		return;
 	}
 
@@ -101,12 +100,12 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 			WHERE
 				reviewId = ${escape(message.reviewId)}
 		`;
-	// console.log('running second query', replaySumaryUpdateQuery);
+	// logger.log('running second query', replaySumaryUpdateQuery);
 	const mysql = await getConnection();
 	await mysql.query(replaySumaryUpdateQuery);
 
 	const statsQuery = buildInsertQuery(message, statsFromGame, allCards, mercenariesReferenceData);
-	// console.log('running query', statsQuery);
+	// logger.log('running query', statsQuery);
 	await mysql.query(statsQuery);
 	await mysql.end();
 };
@@ -138,7 +137,7 @@ export const buildInsertQuery = (
 			const allEquipmentCardIds = statsFromGame
 				.filter(stat => stat.statName === 'mercs-hero-equipment')
 				.map(stat => stat.statValue.split('|')[1]);
-			// console.log(
+			// logger.log(
 			// 	'allEquipmentCardIds',
 			// 	allEquipmentCardIds,
 			// 	statsFromGame.filter(stat => stat.statName === 'mercs-hero-equipment'),
@@ -150,8 +149,8 @@ export const buildInsertQuery = (
 				mercenariesReferenceData,
 			);
 			const normalizedEquipmentCardId = normalizeMercCardId(equipmentCardId);
-			// console.log('equipmentCardId', normalizedEquipmentCardId);
-			// console.log(
+			// logger.log('equipmentCardId', normalizedEquipmentCardId);
+			// logger.log(
 			// 	'spellsFromStats',
 			// 	statsFromGame.filter(stat => stat.statName === 'mercs-hero-skill-used'),
 			// );
@@ -161,7 +160,7 @@ export const buildInsertQuery = (
 				allCards,
 				mercenariesReferenceData,
 			);
-			// console.log('spellsForHero', spellsForHero);
+			// logger.log('spellsForHero', spellsForHero);
 			const heroLevel = parseInt(
 				statsFromGame
 					.filter(stat => stat.statName === 'mercs-hero-level')
@@ -240,19 +239,19 @@ const findEquipmentForHero = (
 	if (!refMerc) {
 		return null;
 	}
-	// console.log('refMerc', refMerc, heroCardId);
+	// logger.log('refMerc', refMerc, heroCardId);
 	const refMercEquipmentTiers = refMerc?.equipments.map(eq => eq.tiers).reduce((a, b) => a.concat(b), []);
-	// console.log('refMercEquipmentTiers', refMercEquipmentTiers);
+	// logger.log('refMercEquipmentTiers', refMercEquipmentTiers);
 	const heroEquipmentCardIds =
 		refMercEquipmentTiers.map(eq => eq.cardDbfId).map(eqDbfId => allCards.getCardFromDbfId(eqDbfId).id) ?? [];
 	const candidates: readonly string[] = heroEquipmentCardIds.filter(e => allEquipmentCardIds.includes(e));
-	// console.log('candidates', heroCardId, candidates);
+	// logger.log('candidates', heroCardId, candidates);
 	if (candidates.length === 0) {
 		return null;
 	}
 
 	if (candidates.length > 1) {
-		console.error('could not get correct equipment for hero', heroCardId, heroEquipmentCardIds, candidates);
+		logger.error('could not get correct equipment for hero', heroCardId, heroEquipmentCardIds, candidates);
 	}
 
 	return candidates[0];
@@ -275,11 +274,11 @@ const getSpellsForHero = (
 			.reduce((a, b) => a.concat(b), [])
 			.map(ability => ability.cardDbfId)
 			.map(abilityDbfId => allCards.getCardFromDbfId(abilityDbfId).id) ?? [];
-	// console.log('heroAbilityCardIds', heroAbilityCardIds);
+	// logger.log('heroAbilityCardIds', heroAbilityCardIds);
 	const allSpellCardIds = stats.map(stat => stat.statValue.split('|')[0]);
-	// console.log('allSpellCardIds', allSpellCardIds);
+	// logger.log('allSpellCardIds', allSpellCardIds);
 	const heroSpellCardIds = allSpellCardIds.filter(s => heroAbilityCardIds.includes(s));
-	// console.log('heroSpellCardIds', heroSpellCardIds);
+	// logger.log('heroSpellCardIds', heroSpellCardIds);
 	return heroSpellCardIds.sort().map(spellCardId => ({
 		spellCardId: normalizeMercCardId(spellCardId),
 		numberOfTimesUsed: parseInt(stats.find(stat => stat.statValue.startsWith(spellCardId)).statValue.split('|')[1]),

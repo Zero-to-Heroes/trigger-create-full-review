@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { getConnection, logger, S3 } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { inflate } from 'pako';
@@ -6,25 +7,23 @@ import { ServerlessMysql } from 'serverless-mysql';
 import SqlString from 'sqlstring';
 import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
-import { getConnection } from './services/rds';
-import { S3 } from './services/s3';
 
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, s3: S3): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	if (message.gameMode !== 'battlegrounds') {
-		console.log('not battlegrounds', message);
+		logger.log('not battlegrounds', message);
 		return;
 	}
 	if (!message.additionalResult || isNaN(parseInt(message.additionalResult))) {
-		console.log('no end position', message);
+		logger.log('no end position', message);
 		return;
 	}
 	// if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
-	// 	console.log('no player rank', message);
+	// 	logger.log('no player rank', message);
 	// 	return;
 	// }
 	// if (!message.availableTribes?.length) {
-	// 	console.log('no available tribes', message);
+	// 	logger.log('no available tribes', message);
 	// 	return;
 	// }
 
@@ -35,7 +34,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	// Because there is a race, the combat winrate might have been populated first
 	const mysql = await getConnection();
 	const combatWinrate = await retrieveCombatWinrate(message, mysql);
-	console.log('retrieved combat winrate?', combatWinrate);
+	logger.log('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
 	const row: InternalBgsRow = {
 		creationDate: new Date(message.creationDate),
@@ -81,7 +80,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			${SqlString.escape(JSON.stringify(row.warbandStats))}
 		)
 	`;
-	console.log('running query', insertQuery);
+	logger.log('running query', insertQuery);
 	await mysql.query(insertQuery);
 	await mysql.end();
 };
@@ -95,10 +94,10 @@ const buildWarbandStats = async (replayInfo: ReplayInfo): Promise<readonly Inter
 			turn: stat.turn,
 			totalStats: stat.value,
 		}));
-		console.log('built warband stats', replayInfo.reviewMessage.reviewId, result);
+		logger.log('built warband stats', replayInfo.reviewMessage.reviewId, result);
 		return result;
 	} catch (e) {
-		console.error('Exception while building warband stats', e);
+		logger.error('Exception while building warband stats', e);
 		return null;
 	}
 };
@@ -111,9 +110,9 @@ const retrieveCombatWinrate = async (
 		SELECT * FROM bgs_single_run_stats
 		WHERE reviewId = '${message.reviewId}'
 	`;
-	console.log('running query', query);
+	logger.log('running query', query);
 	const results: any[] = await mysql.query(query);
-	console.log('results', results);
+	logger.log('results', results);
 	if (!results?.length) {
 		return null;
 	}
@@ -136,7 +135,7 @@ const parseStats = (inputStats: string): BgsPostMatchStats => {
 			const inflated = inflate(fromBase64, { to: 'string' });
 			return JSON.parse(inflated);
 		} catch (e) {
-			console.warn('Could not build full stats, ignoring review', inputStats);
+			logger.warn('Could not build full stats, ignoring review', inputStats);
 		}
 	}
 };
@@ -159,7 +158,7 @@ const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService = nul
 
 	// Fallback to regex
 	const bgHeroSkinMatch = heroCardId.match(/(.*)_SKIN_.*/);
-	// console.debug('normalizing', heroCardId, bgHeroSkinMatch);
+	// logger.debug('normalizing', heroCardId, bgHeroSkinMatch);
 	if (bgHeroSkinMatch) {
 		return bgHeroSkinMatch[1];
 	}

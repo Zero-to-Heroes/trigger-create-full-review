@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
 import {
 	AllCardsService,
 	CardClass,
@@ -6,21 +7,20 @@ import {
 	GameFormat,
 	normalizeDuelsHeroCardId,
 } from '@firestone-hs/reference-data';
-import { ReplayInfo } from './create-full-review';
-import { getConnection } from './services/rds';
-import SqlString from 'sqlstring';
 import { DeckDefinition, decode, encode } from 'deckstrings';
+import SqlString from 'sqlstring';
+import { ReplayInfo } from './create-full-review';
 
 export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsService): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	if (message.gameMode !== 'paid-duels') {
-		console.log('not heroic duels', message);
+		logger.log('not heroic duels', message);
 		return;
 	}
 
 	const runId = message.currentDuelsRunId ?? message.runId;
 	if (!runId) {
-		console.error('runId empty', message);
+		logger.error('runId empty', message);
 		return;
 	}
 
@@ -57,7 +57,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 	// Discard the info if multiple classes are in the same run
 	const uniqueHeroes = [...new Set(allDecksResults.map(result => result.playerCardId))];
 	if (uniqueHeroes.length !== 1) {
-		console.error('corrupted run', runId, uniqueHeroes);
+		logger.error('corrupted run', runId, uniqueHeroes);
 		await mysql.end();
 		return;
 	}
@@ -144,7 +144,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 			${SqlString.escape(row.losses)}
 		)
 	`;
-	console.log('running query', insertQuery);
+	logger.log('running query', insertQuery);
 	await mysql.query(insertQuery);
 	await mysql.end();
 };
@@ -164,7 +164,7 @@ const cleanDecklist = (initialDecklist: string, playerCardId: string, cards: All
 	const decoded = decode(initialDecklist);
 	const validCards = decoded.cards.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible);
 	if (validCards.length !== 15) {
-		console.error('Invalid deck list', initialDecklist, decoded);
+		logger.error('Invalid deck list', initialDecklist, decoded);
 		return null;
 	}
 	const hero = getHero(playerCardId, cards);

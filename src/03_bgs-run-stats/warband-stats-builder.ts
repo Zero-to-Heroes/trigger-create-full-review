@@ -55,7 +55,7 @@ const parseElement = (
 				structure.entities[element.get('entity')].zone = parseInt(element.get('value'));
 			}
 			if (parseInt(element.get('tag')) === GameTag.ATK) {
-				// console.log(
+				// logger.log(
 				// 	'changing attack',
 				// 	structure.entities[element.get('entity')],
 				// 	parseInt(element.get('value')),
@@ -88,7 +88,7 @@ const parseElement = (
 						attack: entity.attack,
 						health: entity.health,
 					}));
-				// console.log(
+				// logger.log(
 				// 	'emitting new turn values',
 				// 	structure.currentTurn,
 				// 	JSON.stringify(playerEntitiesOnBoard, null, 4),

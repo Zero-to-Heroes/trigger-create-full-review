@@ -1,5 +1,5 @@
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
-import { GameTag, Zone } from '@firestone-hs/reference-data';
+import { GameTag } from '@firestone-hs/reference-data';
 import { Element } from 'elementtree';
 import { normalizeMercCardId } from '../../hs-utils';
 import { Parser, ParsingStructure } from '../mercs-replay-crawler';
@@ -21,7 +21,7 @@ export class OpponentHeroesTimingParser implements Parser {
 			}
 			const cardId = normalizeMercCardId(entity.cardId);
 			if (entity.lettuceController !== replay.opponentPlayerId) {
-				// console.debug('wrong controller', entity.lettuceController, replay.opponentPlayerId, entity, replay);
+				// logger.debug('wrong controller', entity.lettuceController, replay.opponentPlayerId, entity, replay);
 				return;
 			}
 

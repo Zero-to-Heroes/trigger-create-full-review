@@ -1,10 +1,10 @@
-import { ReplayInfo } from './create-full-review';
+import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
 import SqlString from 'sqlstring';
-import { getConnection } from './services/rds';
+import { ReplayInfo } from './create-full-review';
 
 export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<void> => {
 	const review = replayInfo.reviewMessage;
-	console.log('handling review', review);
+	logger.log('handling review', review);
 	const playerRank = review.playerRank ? parseInt(review.playerRank) : null;
 	if (!playerRank) {
 		return;
@@ -12,14 +12,14 @@ export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<vo
 
 	const playerName = review.playerName;
 	if (!playerName && review.appVersion === '9.3.5') {
-		console.log('ignoring bogus version');
+		logger.log('ignoring bogus version');
 		return;
 	}
 
 	const query = `
 		SELECT id FROM duels_leaderboard 
 		WHERE playerName = ${SqlString.escape(review.playerName)} AND gameMode = ${SqlString.escape(review.gameMode)}`;
-	console.log('running query', query);
+	logger.log('running query', query);
 	const mysql = await getConnection();
 	const results: any[] = await mysql.query(query);
 
@@ -33,9 +33,9 @@ export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<vo
 				region = ${SqlString.escape(review.region)}
 			WHERE id = ${SqlString.escape(id)}
 		`;
-		console.log('running update query', updateQuery);
+		logger.log('running update query', updateQuery);
 		const updateResult = await mysql.query(updateQuery);
-		console.log('update result', updateResult);
+		logger.log('update result', updateResult);
 	} else {
 		const insertQuery = `
 			INSERT INTO duels_leaderboard (playerName, gameMode, rating, lastUpdateDate, region)
@@ -47,9 +47,9 @@ export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<vo
 				${SqlString.escape(review.region)}
 			)
 		`;
-		console.log('running insert query', insertQuery);
+		logger.log('running insert query', insertQuery);
 		const insertResult = await mysql.query(insertQuery);
-		console.log('insert result', insertResult);
+		logger.log('insert result', insertResult);
 	}
 	await mysql.end();
 };

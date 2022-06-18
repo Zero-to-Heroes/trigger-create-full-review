@@ -34,7 +34,7 @@ export class HeroesTimingParser implements Parser {
 
 	populate = (structure: ParsingStructure, replay: Replay) => {
 		return (currentTurn: number) => {
-			// console.log('populate', this.heroesForThisTurn);
+			// logger.log('populate', this.heroesForThisTurn);
 			for (const heroCardId of this.heroesForThisTurn) {
 				this.heroesTiming[heroCardId] = this.heroesTiming[heroCardId] || currentTurn;
 			}
