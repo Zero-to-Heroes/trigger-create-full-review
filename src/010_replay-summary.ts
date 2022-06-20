@@ -17,29 +17,20 @@ export const saveReplayInReplaySummary = async (
 ): Promise<ReplayInfo> => {
 	const bucketName = message.bucket.name;
 	const key: string = message.object.key;
-
-	// The lambda randomly times out, and I haven't yet been able to find out why
-	const debugLogs = [];
-	const timeout = setTimeout(() => {
-		logger.error('will timeout');
-		debugLogs.forEach(log => logger.log(log));
-	}, 56000);
-
+	logger.debug('will get metadata');
 	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
-	debugLogs.push('got metadata', metadata);
+	logger.debug('got metadata', metadata);
 	if (!metadata) {
 		logger.error('No metadata for review', bucketName, key);
-		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
 	const replayString = await s3.readZippedContent(bucketName, key);
-	debugLogs.push('got replayString', bucketName, key);
+	logger.debug('got replayString', bucketName, key);
 	if (!replayString) {
 		logger.error('Could not read file, not processing review', bucketName, key);
-		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
@@ -60,7 +51,6 @@ export const saveReplayInReplaySummary = async (
 	const gameFormat: GameFormatString = undefinedAsNull(metadata['game-format']) as GameFormatString;
 	const application = undefinedAsNull(metadata['application-key']);
 	if (application !== 'firestone') {
-		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
@@ -69,7 +59,7 @@ export const saveReplayInReplaySummary = async (
 	const existingReviewResult: any[] = await mysql.query(
 		`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`,
 	);
-	debugLogs.push('got existingReviewResult');
+	logger.debug('got existingReviewResult');
 
 	const inputReplayKey = undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
@@ -83,11 +73,10 @@ export const saveReplayInReplaySummary = async (
 		replay = parseHsReplayString(replayString, cards as any);
 	} catch (e) {
 		logger.error('Could not parse replay', e, message);
-		!!timeout && clearTimeout(timeout);
 		return null;
 	}
 
-	debugLogs.push('got parseHsReplayString');
+	logger.debug('got parseHsReplayString');
 	const playerName = replay.mainPlayerName;
 	const opponentName =
 		undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ?? replay.opponentPlayerName;
@@ -146,10 +135,9 @@ export const saveReplayInReplaySummary = async (
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
-	debugLogs.push('built review message', message);
+	logger.debug('built review message', message);
 
 	if (existingReviewResult.length > 0) {
-		!!timeout && clearTimeout(timeout);
 		return {
 			userName: userName,
 			replay: replay,
@@ -161,7 +149,7 @@ export const saveReplayInReplaySummary = async (
 
 	logger.log('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	debugLogs.push('file written');
+	logger.debug('file written');
 
 	const query = `
 			INSERT INTO replay_summary
@@ -233,11 +221,11 @@ export const saveReplayInReplaySummary = async (
 				${replay.region}
 			)
 		`;
-	debugLogs.push('running query', query);
+	logger.debug('running query', query);
 	await mysql.query(query);
-	debugLogs.push('ran query');
+	logger.debug('ran query');
 	await mysql.end();
-	debugLogs.push('closed connection');
+	logger.debug('closed connection');
 	// trigger-build-match-stats, trigger-sync-data
 	// TODO: move to 'ranked' only
 	sns.notifyReviewPublished(reviewToNotify);
@@ -274,9 +262,8 @@ export const saveReplayInReplaySummary = async (
 		// trigger-build-mercenaries-match-stats
 		sns.notifyMercenariesReviewPublished(reviewToNotify);
 	}
-	debugLogs.push('notifs sent');
+	logger.debug('notifs sent');
 
-	!!timeout && clearTimeout(timeout);
 	return {
 		userName: userName,
 		replay: replay,

@@ -22,24 +22,31 @@ const cards = new AllCardsService();
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
 export default async (event, context): Promise<any> => {
 	const cleanup = logBeforeTimeout(context);
+	logger.debug('received message', event);
 	const messages = event.Records.map(record => record.body).map(msg => JSON.parse(msg));
 	const s3infos = messages
 		.map(msg => JSON.parse(msg.Message))
 		.map(msg => msg.Records)
 		.reduce((a, b) => a.concat(b), [])
 		.map(record => record.s3);
-
+	logger.debug('wait for cards db init');
 	await cards.initializeCardsDb();
+	logger.debug('card db init done');
 	await Promise.all(s3infos.map(s3 => handleReplay(s3)));
 	cleanup();
 	return { statusCode: 200, body: '' };
 };
 
 const handleReplay = async (message): Promise<boolean> => {
+	logger.debug('start processing', message);
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
-		if (replayInfo.userName === 'daedin' || replayInfo.reviewMessage.appChannel === 'beta') {
-			logger.log('new process');
+		const useNewProcess =
+			replayInfo.userName === 'daedin' ||
+			replayInfo.reviewMessage.appChannel === 'beta' ||
+			replayInfo.reviewMessage.userId?.endsWith('aaa');
+		if (useNewProcess) {
+			logger.log('new process', replayInfo.reviewMessage);
 			await buildMatchStats(replayInfo);
 			if (['battlegrounds'].includes(replayInfo.reviewMessage.gameMode)) {
 				await buildBgsRunStats(replayInfo, cards, s3);
