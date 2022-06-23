@@ -44,10 +44,7 @@ const handleReplay = async (message): Promise<boolean> => {
 		const useNewProcess =
 			replayInfo.userName === 'daedin' ||
 			replayInfo.reviewMessage.appChannel === 'beta' ||
-			replayInfo.reviewMessage.userId?.endsWith('aaa') ||
-			replayInfo.reviewMessage.userId?.endsWith('bbb') ||
-			replayInfo.reviewMessage.userId?.endsWith('ccc') ||
-			replayInfo.reviewMessage.userId?.endsWith('ddd');
+			replayInfo.reviewMessage.userId?.endsWith('aa');
 		if (useNewProcess) {
 			logger.log('new process', replayInfo.reviewMessage);
 			await buildMatchStats(replayInfo);
