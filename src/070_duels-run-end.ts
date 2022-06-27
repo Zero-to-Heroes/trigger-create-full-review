@@ -14,7 +14,7 @@ import { ReplayInfo } from './create-full-review';
 export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsService): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	if (message.gameMode !== 'paid-duels') {
-		logger.log('not heroic duels', message);
+		logger.debug('not heroic duels', message);
 		return;
 	}
 
@@ -144,7 +144,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 			${SqlString.escape(row.losses)}
 		)
 	`;
-	logger.log('running query', insertQuery);
+	logger.debug('running query', insertQuery);
 	await mysql.query(insertQuery);
 	await mysql.end();
 };

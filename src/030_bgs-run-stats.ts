@@ -11,19 +11,19 @@ import { ReviewMessage } from './review-message';
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, s3: S3): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	if (message.gameMode !== 'battlegrounds') {
-		logger.log('not battlegrounds', message);
+		logger.debug('not battlegrounds', message);
 		return;
 	}
 	if (!message.additionalResult || isNaN(parseInt(message.additionalResult))) {
-		logger.log('no end position', message);
+		logger.debug('no end position', message);
 		return;
 	}
 	// if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
-	// 	logger.log('no player rank', message);
+	// 	logger.debug('no player rank', message);
 	// 	return;
 	// }
 	// if (!message.availableTribes?.length) {
-	// 	logger.log('no available tribes', message);
+	// 	logger.debug('no available tribes', message);
 	// 	return;
 	// }
 
@@ -34,7 +34,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	// Because there is a race, the combat winrate might have been populated first
 	const mysql = await getConnection();
 	const combatWinrate = await retrieveCombatWinrate(message, mysql);
-	logger.log('retrieved combat winrate?', combatWinrate);
+	logger.debug('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
 	const row: InternalBgsRow = {
 		creationDate: new Date(message.creationDate),
@@ -80,7 +80,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			${SqlString.escape(JSON.stringify(row.warbandStats))}
 		)
 	`;
-	logger.log('running query', insertQuery);
+	logger.debug('running query', insertQuery);
 	await mysql.query(insertQuery);
 	await mysql.end();
 };
@@ -94,7 +94,7 @@ const buildWarbandStats = async (replayInfo: ReplayInfo): Promise<readonly Inter
 			turn: stat.turn,
 			totalStats: stat.value,
 		}));
-		logger.log('built warband stats', replayInfo.reviewMessage.reviewId, result);
+		logger.debug('built warband stats', replayInfo.reviewMessage.reviewId, result);
 		return result;
 	} catch (e) {
 		logger.error('Exception while building warband stats', e);
@@ -110,9 +110,9 @@ const retrieveCombatWinrate = async (
 		SELECT * FROM bgs_single_run_stats
 		WHERE reviewId = '${message.reviewId}'
 	`;
-	logger.log('running query', query);
+	logger.debug('running query', query);
 	const results: any[] = await mysql.query(query);
-	logger.log('results', results);
+	logger.debug('results', results);
 	if (!results?.length) {
 		return null;
 	}

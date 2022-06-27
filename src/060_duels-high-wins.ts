@@ -8,7 +8,7 @@ import { formatDate, toCreationDate } from './services/utils';
 
 export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCardsService) => {
 	const message = replayInfo.reviewMessage;
-	logger.log('handling message', message);
+	logger.debug('handling message', message);
 	const runId = message.currentDuelsRunId;
 	if (!runId) {
 		logger.error('runId empty', message);
@@ -74,7 +74,7 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 	}
 
 	const rating = allDecksResults.find(result => result.playerRank != null)?.playerRank;
-	logger.log('rating', rating, allDecksResults);
+	logger.debug('rating', rating, allDecksResults);
 	const stat = {
 		periodStart: periodDate,
 		playerClass: firstGameInRun.playerClass,

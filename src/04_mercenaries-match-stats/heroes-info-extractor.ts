@@ -20,14 +20,14 @@ export const mercsHeroesInfosExtractor = async (
 	allCards: AllCardsService,
 	mercenariesReferenceData: MercenariesReferenceData,
 ): Promise<readonly Stat[]> => {
-	// logger.log('will extract', isMercenaries(message.gameMode), message.gameMode);
+	// logger.debug('will extract', isMercenaries(message.gameMode), message.gameMode);
 	if (!isMercenaries(message.gameMode)) {
 		return null;
 	}
 
-	logger.log('replay mainPlayerId', replay.mainPlayerId);
+	logger.debug('replay mainPlayerId', replay.mainPlayerId);
 	const heroesInfos = heroesInfosExtractor(replay, allCards, mercenariesReferenceData);
-	// logger.log('heroesTiming', heroesTiming);
+	// logger.debug('heroesTiming', heroesTiming);
 
 	return [
 		...Object.keys(heroesInfos.timings).map(

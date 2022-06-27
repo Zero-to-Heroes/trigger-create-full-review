@@ -48,7 +48,7 @@ export const buildMatchStats = async (replayInfo: ReplayInfo) => {
 	// and the mercenaries table at the same time
 
 	const validStats = statsFromGame.filter(stat => stat);
-	// logger.log('validStats', validStats);
+	// logger.debug('validStats', validStats);
 	const mysql = await getConnection();
 	if (validStats.length > 0) {
 		const escape = SqlString.escape;
@@ -68,7 +68,7 @@ export const buildMatchStats = async (replayInfo: ReplayInfo) => {
 			WHERE
 				reviewId = ${escape(emptyAsNull(reviewId))}
 		`;
-		// logger.log('running second query', additionalQuery2);
+		// logger.debug('running second query', additionalQuery2);
 		await mysql.query(additionalQuery2);
 	}
 	await mysql.end();

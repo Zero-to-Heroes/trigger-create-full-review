@@ -41,12 +41,9 @@ const handleReplay = async (message): Promise<boolean> => {
 	logger.debug('start processing', message);
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
-		const useNewProcess =
-			replayInfo.userName === 'daedin' ||
-			replayInfo.reviewMessage.appChannel === 'beta' ||
-			replayInfo.reviewMessage.userId?.endsWith('aa');
+		const useNewProcess = true;
 		if (useNewProcess) {
-			logger.log('new process', replayInfo.reviewMessage);
+			logger.debug('new process', replayInfo.reviewMessage);
 			await buildMatchStats(replayInfo);
 			if (['battlegrounds'].includes(replayInfo.reviewMessage.gameMode)) {
 				await buildBgsRunStats(replayInfo, cards, s3);

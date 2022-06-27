@@ -31,7 +31,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		return;
 	}
 
-	logger.log(
+	logger.debug(
 		'processing',
 		message,
 		// scenarioId === ScenarioId.LETTUCE_MAP_PVE ? isNaN(parseInt(message.mercBountyId as any)) : null,
@@ -41,15 +41,15 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		const strReferenceData = await http(
 			`https://static.zerotoheroes.com/hearthstone/data/mercenaries-data.json?v=3`,
 		);
-		// logger.log('found reference data', strReferenceData?.length);
+		// logger.debug('found reference data', strReferenceData?.length);
 		mercenariesReferenceData = JSON.parse(strReferenceData);
-		// logger.log('parsed reference data', mercenariesReferenceData);
+		// logger.debug('parsed reference data', mercenariesReferenceData);
 	}
 
 	const replay: Replay = replayInfo.replay;
 	const numberOfTurns = extractTotalTurns(replay);
 	if (numberOfTurns <= 3) {
-		logger.log('game too short, not including it for stats', numberOfTurns);
+		logger.debug('game too short, not including it for stats', numberOfTurns);
 		return;
 	}
 
@@ -62,7 +62,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 	);
 
 	if (!statsFromGame.filter(stat => stat.statName === 'mercs-hero-timing').length) {
-		// logger.log('no hero timings, returning', statsFromGame);
+		// logger.debug('no hero timings, returning', statsFromGame);
 		return;
 	}
 
@@ -100,12 +100,12 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 			WHERE
 				reviewId = ${escape(message.reviewId)}
 		`;
-	// logger.log('running second query', replaySumaryUpdateQuery);
+	// logger.debug('running second query', replaySumaryUpdateQuery);
 	const mysql = await getConnection();
 	await mysql.query(replaySumaryUpdateQuery);
 
 	const statsQuery = buildInsertQuery(message, statsFromGame, allCards, mercenariesReferenceData);
-	// logger.log('running query', statsQuery);
+	// logger.debug('running query', statsQuery);
 	await mysql.query(statsQuery);
 	await mysql.end();
 };
@@ -137,7 +137,7 @@ export const buildInsertQuery = (
 			const allEquipmentCardIds = statsFromGame
 				.filter(stat => stat.statName === 'mercs-hero-equipment')
 				.map(stat => stat.statValue.split('|')[1]);
-			// logger.log(
+			// logger.debug(
 			// 	'allEquipmentCardIds',
 			// 	allEquipmentCardIds,
 			// 	statsFromGame.filter(stat => stat.statName === 'mercs-hero-equipment'),
@@ -149,8 +149,8 @@ export const buildInsertQuery = (
 				mercenariesReferenceData,
 			);
 			const normalizedEquipmentCardId = normalizeMercCardId(equipmentCardId);
-			// logger.log('equipmentCardId', normalizedEquipmentCardId);
-			// logger.log(
+			// logger.debug('equipmentCardId', normalizedEquipmentCardId);
+			// logger.debug(
 			// 	'spellsFromStats',
 			// 	statsFromGame.filter(stat => stat.statName === 'mercs-hero-skill-used'),
 			// );
@@ -160,7 +160,7 @@ export const buildInsertQuery = (
 				allCards,
 				mercenariesReferenceData,
 			);
-			// logger.log('spellsForHero', spellsForHero);
+			// logger.debug('spellsForHero', spellsForHero);
 			const heroLevel = parseInt(
 				statsFromGame
 					.filter(stat => stat.statName === 'mercs-hero-level')
@@ -239,13 +239,13 @@ const findEquipmentForHero = (
 	if (!refMerc) {
 		return null;
 	}
-	// logger.log('refMerc', refMerc, heroCardId);
+	// logger.debug('refMerc', refMerc, heroCardId);
 	const refMercEquipmentTiers = refMerc?.equipments.map(eq => eq.tiers).reduce((a, b) => a.concat(b), []);
-	// logger.log('refMercEquipmentTiers', refMercEquipmentTiers);
+	// logger.debug('refMercEquipmentTiers', refMercEquipmentTiers);
 	const heroEquipmentCardIds =
 		refMercEquipmentTiers.map(eq => eq.cardDbfId).map(eqDbfId => allCards.getCardFromDbfId(eqDbfId).id) ?? [];
 	const candidates: readonly string[] = heroEquipmentCardIds.filter(e => allEquipmentCardIds.includes(e));
-	// logger.log('candidates', heroCardId, candidates);
+	// logger.debug('candidates', heroCardId, candidates);
 	if (candidates.length === 0) {
 		return null;
 	}
@@ -274,11 +274,11 @@ const getSpellsForHero = (
 			.reduce((a, b) => a.concat(b), [])
 			.map(ability => ability.cardDbfId)
 			.map(abilityDbfId => allCards.getCardFromDbfId(abilityDbfId).id) ?? [];
-	// logger.log('heroAbilityCardIds', heroAbilityCardIds);
+	// logger.debug('heroAbilityCardIds', heroAbilityCardIds);
 	const allSpellCardIds = stats.map(stat => stat.statValue.split('|')[0]);
-	// logger.log('allSpellCardIds', allSpellCardIds);
+	// logger.debug('allSpellCardIds', allSpellCardIds);
 	const heroSpellCardIds = allSpellCardIds.filter(s => heroAbilityCardIds.includes(s));
-	// logger.log('heroSpellCardIds', heroSpellCardIds);
+	// logger.debug('heroSpellCardIds', heroSpellCardIds);
 	return heroSpellCardIds.sort().map(spellCardId => ({
 		spellCardId: normalizeMercCardId(spellCardId),
 		numberOfTimesUsed: parseInt(stats.find(stat => stat.statValue.startsWith(spellCardId)).statValue.split('|')[1]),

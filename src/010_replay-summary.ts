@@ -147,7 +147,7 @@ export const saveReplayInReplaySummary = async (
 		};
 	}
 
-	logger.log('Writing file', reviewId);
+	logger.debug('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
 	logger.debug('file written');
 
