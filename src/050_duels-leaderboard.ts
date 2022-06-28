@@ -38,7 +38,7 @@ export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<vo
 		logger.debug('update result', updateResult);
 	} else {
 		const insertQuery = `
-			INSERT INTO duels_leaderboard (playerName, gameMode, rating, lastUpdateDate, region)
+			INSERT IGNORE INTO duels_leaderboard (playerName, gameMode, rating, lastUpdateDate, region)
 			VALUES (
 				${SqlString.escape(playerName)}, 
 				${SqlString.escape(review.gameMode)}, 

@@ -10,7 +10,7 @@ import { ReviewMessage } from './review-message';
 
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, s3: S3): Promise<void> => {
 	const message = replayInfo.reviewMessage;
-	if (message.gameMode !== 'battlegrounds') {
+	if (message.gameMode !== 'battlegrounds' && message.gameMode !== 'battlegrounds-friendly') {
 		logger.debug('not battlegrounds', message);
 		return;
 	}

@@ -84,7 +84,9 @@ export const saveReplayInReplaySummary = async (
 	const opponentCardId = replay.opponentPlayerCardId;
 	const result = replay.result;
 	const additionalResult =
-		gameMode === 'battlegrounds' ? replay.additionalResult : undefinedAsNull(metadata['additional-result']);
+		gameMode === 'battlegrounds' || gameMode === 'battlegrounds-friendly'
+			? replay.additionalResult
+			: undefinedAsNull(metadata['additional-result']);
 	const playCoin = replay.playCoin;
 	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
@@ -247,7 +249,7 @@ export const saveReplayInReplaySummary = async (
 	} else if (['ranked'].includes(gameMode)) {
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
-	} else if (['battlegrounds'].includes(gameMode)) {
+	} else if (['battlegrounds', 'battlegrounds-friendly'].includes(gameMode)) {
 		// trigger-build-bgs-run-stats
 		sns.notifyBattlegroundsReviewPublished(reviewToNotify);
 	} else if (

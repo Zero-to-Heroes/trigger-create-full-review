@@ -7,7 +7,7 @@ export const bgsHeroPickExtractor = async (
 	replay: Replay,
 	replayString: string,
 ): Promise<readonly Stat[]> => {
-	if (message.gameMode !== 'battlegrounds') {
+	if (message.gameMode !== 'battlegrounds' && message.gameMode !== 'battlegrounds-friendly') {
 		return null;
 	}
 

@@ -45,7 +45,7 @@ const handleReplay = async (message): Promise<boolean> => {
 		if (useNewProcess) {
 			logger.debug('new process', replayInfo.reviewMessage);
 			await buildMatchStats(replayInfo);
-			if (['battlegrounds'].includes(replayInfo.reviewMessage.gameMode)) {
+			if (['battlegrounds', 'battlegrounds-friendly'].includes(replayInfo.reviewMessage.gameMode)) {
 				await buildBgsRunStats(replayInfo, cards, s3);
 				await buildBgsPostMatchStats(replayInfo, cards, s3);
 			} else if (['mercenaries-pvp'].includes(replayInfo.reviewMessage.gameMode)) {
