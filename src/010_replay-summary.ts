@@ -3,9 +3,11 @@ import { getConnection, logger, S3 } from '@firestone-hs/aws-lambda-utils';
 import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
+import { decode } from 'deckstrings';
 import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
 import { ReplayInfo } from './create-full-review';
+import { getDefaultHeroDbfIdForClass } from './hs-utils';
 import { ReviewMessage } from './review-message';
 import { Sns } from './services/sns';
 
@@ -80,7 +82,6 @@ export const saveReplayInReplaySummary = async (
 	const playerName = replay.mainPlayerName;
 	const opponentName =
 		undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ?? replay.opponentPlayerName;
-	const playerCardId = replay.mainPlayerCardId;
 	const opponentCardId = replay.opponentPlayerCardId;
 	const result = replay.result;
 	const additionalResult =
@@ -88,7 +89,29 @@ export const saveReplayInReplaySummary = async (
 			? replay.additionalResult
 			: undefinedAsNull(metadata['additional-result']);
 	const playCoin = replay.playCoin;
-	const playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
+
+	let playerClass = cards.getCard(replay.mainPlayerCardId)?.playerClass?.toLowerCase();
+	let playerCardId = replay.mainPlayerCardId;
+	if (gameMode === 'ranked') {
+		try {
+			// Because we might be playing a Maestra deck and ended the game before revealing ourselves
+			const deckDefinition = !!deckstring?.length ? decode(deckstring) : null;
+			const playerClassFromDeckstring = cards
+				.getCardFromDbfId(deckDefinition?.heroes[0])
+				?.playerClass?.toLowerCase();
+			playerClass =
+				!!playerClassFromDeckstring && playerClassFromDeckstring !== 'neutral'
+					? playerClassFromDeckstring
+					: cards.getCard(replay.mainPlayerCardId)?.playerClass?.toLowerCase();
+
+			if (playerClass !== cards.getCard(replay.mainPlayerCardId)?.playerClass?.toLowerCase()) {
+				playerCardId = cards.getCardFromDbfId(getDefaultHeroDbfIdForClass(playerClass)).id;
+			}
+		} catch (e) {
+			console.error('could not properly parse deckstring', deckstring, e);
+		}
+	}
+
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
 	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
@@ -186,7 +209,8 @@ export const saveReplayInReplaySummary = async (
 				bgsHasPrizes,
 				mercsBountyId,
 				runId,
-				region
+				region,
+				allowGameShare
 			)
 			VALUES
 			(
@@ -220,7 +244,8 @@ export const saveReplayInReplaySummary = async (
 				${bgsHasPrizes ? 1 : 0},
 				${nullIfEmpty(metadata['mercs-bounty-id'])},
 				${nullIfEmpty(runId)},
-				${replay.region}
+				${replay.region},
+				${getMetadataBool(metadata, 'allow-game-share') ? 1 : 0}
 			)
 		`;
 	logger.debug('running query', query);
@@ -290,6 +315,10 @@ const extractTribes = (tribes: string): readonly Race[] => {
 
 const undefinedAsNull = (text: string): string => {
 	return text === 'undefined' || text === 'null' || !text || text.length === 0 ? null : text;
+};
+
+const getMetadataBool = (metadata: any, key: string): boolean => {
+	return metadata[key] === 'true';
 };
 
 const toCreationDate = (today: Date): string => {
