@@ -37,8 +37,8 @@ export default async (event, context): Promise<any> => {
 	return { statusCode: 200, body: '' };
 };
 
-const handleReplay = async (message): Promise<boolean> => {
-	logger.debug('start processing', message);
+const handleReplay = async (message): Promise<void> => {
+	logger.log('start processing', message);
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
 		const useNewProcess = true;
@@ -70,9 +70,14 @@ const handleReplay = async (message): Promise<boolean> => {
 				}
 			}
 		}
-		return true;
+
+		if (
+			replayInfo.reviewMessage.userName === 'setter90' ||
+			replayInfo.reviewMessage.userId === 'OW_0a4096f8-8785-4a3b-9491-3744c4150c0c'
+		) {
+			logger.error('dumping debug logs');
+		}
 	}
-	return false;
 };
 
 export interface ReplayInfo {
