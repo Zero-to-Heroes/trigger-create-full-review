@@ -8,7 +8,6 @@ import { buildBgsRunStats } from './030_bgs-run-stats';
 import { buildBgsPostMatchStats } from './035_bgs-post-match-stats';
 import { buildMercenariesMatchStats } from './040_mercenaries-match-stats';
 import { updateDuelsLeaderboard } from './050_duels-leaderboard';
-import { handleDuelsHighWins } from './060_duels-high-wins';
 import { handleDuelsRunEnd } from './070_duels-run-end';
 import { ReviewMessage } from './review-message';
 import { Sns } from './services/sns';
@@ -56,12 +55,13 @@ const handleReplay = async (message): Promise<void> => {
 			) {
 				await updateDuelsLeaderboard(replayInfo);
 				const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map(info => parseInt(info));
-				if (
-					(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
-					(losses === 2 && replayInfo.reviewMessage.result === 'lost' && wins >= 10)
-				) {
-					await handleDuelsHighWins(replayInfo, cards);
-				}
+				// Handled as part of the RunEnd process
+				// if (
+				// 	(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
+				// 	(losses === 2 && replayInfo.reviewMessage.result === 'lost' && wins >= 10)
+				// ) {
+				// 	await handleDuelsHighWins(replayInfo, cards);
+				// }
 				if (
 					(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
 					(losses === 2 && replayInfo.reviewMessage.result === 'lost')

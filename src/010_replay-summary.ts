@@ -52,6 +52,7 @@ export const saveReplayInReplaySummary = async (
 	const gameMode = undefinedAsNull(metadata['game-mode']);
 	const gameFormat: GameFormatString = undefinedAsNull(metadata['game-format']) as GameFormatString;
 	const application = undefinedAsNull(metadata['application-key']);
+	const allowGameShare = getMetadataBool(metadata, 'allow-game-share');
 	if (application !== 'firestone') {
 		return null;
 	}
@@ -157,6 +158,7 @@ export const saveReplayInReplaySummary = async (
 			? +undefinedAsNull(metadata['mercs-bounty-id'])
 			: null,
 		region: replay.region,
+		allowGameShare: allowGameShare,
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
@@ -245,7 +247,7 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(metadata['mercs-bounty-id'])},
 				${nullIfEmpty(runId)},
 				${replay.region},
-				${getMetadataBool(metadata, 'allow-game-share') ? 1 : 0}
+				${allowGameShare ? 1 : 0}
 			)
 		`;
 	logger.debug('running query', query);

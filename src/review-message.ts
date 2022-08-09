@@ -36,4 +36,5 @@ export interface ReviewMessage {
 	readonly bgsHasPrizes: boolean;
 	readonly mercBountyId: number;
 	readonly region: BnetRegion;
+	readonly allowGameShare: boolean;
 }

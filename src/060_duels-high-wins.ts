@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
-import { AllCardsService, GameFormat } from '@firestone-hs/reference-data';
+import {
+	AllCardsService,
+	allDuelsHeroes,
+	allDuelsSignatureTreasures,
+	CardIds,
+	GameFormat,
+} from '@firestone-hs/reference-data';
 import { DeckDefinition, decode, encode } from 'deckstrings';
 import { DeckStat } from './06_duels-high-wins/deck-stat';
 import { ReplayInfo } from './create-full-review';
@@ -9,7 +15,12 @@ import { formatDate, toCreationDate } from './services/utils';
 export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCardsService) => {
 	const message = replayInfo.reviewMessage;
 	logger.debug('handling message', message);
-	const runId = message.currentDuelsRunId;
+	if (!message.allowGameShare) {
+		logger.log('not allowing game share for duels high wins', message);
+		return;
+	}
+
+	const runId = message.currentDuelsRunId ?? message.runId;
 	if (!runId) {
 		logger.error('runId empty', message);
 		return;
@@ -37,7 +48,9 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 	const allDecksResults: readonly any[] = await mysql.query(query);
 
 	// Discard the info if multiple classes are in the same run
-	const uniqueHeroes = [...new Set(allDecksResults.map(result => result.playerCardId))];
+	const uniqueHeroes = [
+		...new Set(allDecksResults.map(result => result.playerCardId).filter(hero => allDuelsHeroes.includes(hero))),
+	];
 	if (uniqueHeroes.length !== 1) {
 		logger.error('corrupted run', runId, uniqueHeroes);
 		await mysql.end();
@@ -46,12 +59,14 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 
 	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
 	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
+		console.error('missing game/loot info for high-wins decks', lootResults, firstGameResult);
 		await mysql.end();
 		return;
 	}
 
 	const heroPowerNodes = lootResults.filter(result => result.bundleType === 'hero-power');
 	if (heroPowerNodes.length !== 1 || firstGameResult.length !== 1) {
+		console.error('missing hero power info for high-wins decks', heroPowerNodes, firstGameResult);
 		await mysql.end();
 		return;
 	}
@@ -69,6 +84,7 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 	const periodDate = formatDate(new Date());
 	const decklist = cleanDecklist(firstGameInRun.playerDecklist, firstGameInRun.playerCardId, cards);
 	if (!decklist) {
+		logger.error('invalid decklist', firstGameInRun.playerDecklist, firstGameInRun.playerCardId);
 		await mysql.end();
 		return null;
 	}
@@ -118,9 +134,12 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 
 const cleanDecklist = (initialDecklist: string, playerCardId: string, cards: AllCardsService): string => {
 	const decoded = decode(initialDecklist);
-	const validCards = decoded.cards.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible);
+	const validCards = decoded.cards
+		.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible)
+		.filter(dbfCardId => !allDuelsSignatureTreasures.includes(cards.getCardFromDbfId(dbfCardId[0]).id as CardIds));
 	if (validCards.length !== 15) {
-		logger.error('Invalid deck list', initialDecklist, decoded);
+		logger.log('valid cards', validCards);
+		logger.error('Invalid deck list', initialDecklist, decoded, validCards);
 		return null;
 	}
 	const hero = getHero(playerCardId, cards);

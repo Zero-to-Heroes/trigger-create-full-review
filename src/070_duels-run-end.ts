@@ -2,6 +2,7 @@
 import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
 import {
 	AllCardsService,
+	allDuelsHeroes,
 	CardClass,
 	duelsHeroConfigs,
 	GameFormat,
@@ -9,21 +10,19 @@ import {
 } from '@firestone-hs/reference-data';
 import { DeckDefinition, decode, encode } from 'deckstrings';
 import SqlString from 'sqlstring';
+import { DeckStat } from './06_duels-high-wins/deck-stat';
 import { ReplayInfo } from './create-full-review';
+import { formatDate, toCreationDate } from './services/utils';
 
 export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsService): Promise<void> => {
 	const message = replayInfo.reviewMessage;
-	if (message.gameMode !== 'paid-duels') {
-		logger.debug('not heroic duels', message);
-		return;
-	}
-
 	const runId = message.currentDuelsRunId ?? message.runId;
 	if (!runId) {
 		logger.error('runId empty', message);
 		return;
 	}
 
+	const mysql = await getConnection();
 	const lootQuery = `
 		SELECT bundleType, 
 		CASE  
@@ -34,12 +33,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 		WHERE runId = '${runId}'
 		AND bundleType IN ('treasure', 'hero-power', 'signature-treasure') 
 	`;
-	const mysql = await getConnection();
 	const lootResults: readonly any[] = await mysql.query(lootQuery);
-	if (!lootResults?.length) {
-		await mysql.end();
-		return;
-	}
 
 	const query = `
 		SELECT x1.creationDate, x1.playerClass, x1.playerCardId, x1.playerRank, x1.playerDecklist, x1.additionalResult
@@ -48,16 +42,20 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 		AND x1.playerDecklist IS NOT null 
 	`;
 	const allDecksResults: readonly any[] = await mysql.query(query);
-	const decksResults = allDecksResults.filter(result => result.additionalResult === '0-0');
-	if (!decksResults || decksResults.length !== 1) {
+
+	// Discard the info if multiple classes are in the same run
+	const uniqueHeroes = [
+		...new Set(allDecksResults.map(result => result.playerCardId).filter(hero => allDuelsHeroes.includes(hero))),
+	];
+	if (uniqueHeroes.length !== 1) {
+		logger.error('corrupted run', runId, uniqueHeroes);
 		await mysql.end();
 		return;
 	}
 
-	// Discard the info if multiple classes are in the same run
-	const uniqueHeroes = [...new Set(allDecksResults.map(result => result.playerCardId))];
-	if (uniqueHeroes.length !== 1) {
-		logger.error('corrupted run', runId, uniqueHeroes);
+	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
+	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
+		console.error('missing game/loot info for run end', lootResults, firstGameResult);
 		await mysql.end();
 		return;
 	}
@@ -72,14 +70,17 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 	const finalDecklist = message.playerDecklist;
 	const [wins, losses] = message.additionalResult.split('-').map(info => parseInt(info));
 
-	const firstGameInRun = decksResults[0];
+	const firstGameInRun = firstGameResult[0];
 	const periodDate = new Date(message.creationDate);
 	const decklist = cleanDecklist(firstGameInRun.playerDecklist, firstGameInRun.playerCardId, cards);
 	if (!decklist) {
+		logger.error('invalid decklist', firstGameInRun.playerDecklist, firstGameInRun.playerCardId);
 		await mysql.end();
 		return null;
 	}
 
+	const rating = allDecksResults.find(result => result.playerRank != null)?.playerRank;
+	logger.debug('rating', rating, allDecksResults);
 	const playerClass = findPlayerClass(firstGameInRun.playerClass, firstGameInRun.playerCardId);
 	const allTreasures = findTreasuresCardIds(lootResults, heroPowerNode.runId);
 	const row: InternalDuelsRow = {
@@ -87,7 +88,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 		runStartDate: new Date(firstGameInRun.creationDate),
 		runEndDate: periodDate,
 		buildNumber: message.buildNumber,
-		rating: firstGameInRun.playerRank,
+		rating: rating,
 		runId: runId,
 		playerClass: playerClass,
 		hero: message.playerCardId,
@@ -103,9 +104,9 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 			.join(','),
 	} as InternalDuelsRow;
 
-	// For some reason the query is sometimes sent twice, which is why we IGNORE
-	const insertQuery = `
-		INSERT IGNORE INTO duels_stats_by_run 
+	try {
+		const insertQuery = `
+		INSERT INTO duels_stats_by_run 
 		(
 			gameMode, 
 			runStartDate, 
@@ -144,8 +145,57 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 			${SqlString.escape(row.losses)}
 		)
 	`;
-	logger.debug('running query', insertQuery);
-	await mysql.query(insertQuery);
+		logger.debug('running query', insertQuery);
+		await mysql.query(insertQuery);
+	} catch (e) {
+		logger.error('could not execute query', e);
+	}
+
+	// Handling high-wins
+	if (
+		replayInfo.reviewMessage.allowGameShare &&
+		((wins === 11 && replayInfo.reviewMessage.result === 'won') ||
+			(losses === 2 && replayInfo.reviewMessage.result === 'lost' && wins >= 10))
+	) {
+		const highWinStat = {
+			periodStart: formatDate(new Date()),
+			playerClass: firstGameInRun.playerClass,
+			finalDecklist: finalDecklist,
+			decklist: decklist,
+			heroCardId: message.playerCardId,
+			heroPowerCardId: heroPowerNode.pickedTreasure,
+			signatureTreasureCardId: findSignatureTreasureCardId(lootResults, heroPowerNode.runId),
+			treasuresCardIds: findTreasuresCardIds(lootResults, heroPowerNode.runId),
+			runId: runId,
+			wins: wins + (message.result === 'won' ? 1 : 0),
+			losses: losses + (message.result === 'lost' ? 1 : 0),
+			rating: rating,
+			runStartDate: toCreationDate(firstGameInRun.creationDate),
+		} as DeckStat;
+
+		const insertHighWinsQuery = `
+			INSERT INTO duels_stats_deck 
+			(gameMode, periodStart, playerClass, decklist, finalDecklist, heroCardId, heroPowerCardId, signatureTreasureCardId, treasuresCardIds, runId, wins, losses, rating, runStartDate)
+			VALUES 
+			(
+				'${message.gameMode}',
+				'${highWinStat.periodStart}', 
+				'${highWinStat.playerClass}', 
+				'${highWinStat.decklist}', 
+				'${highWinStat.finalDecklist}', 
+				'${highWinStat.heroCardId}', 
+				'${highWinStat.heroPowerCardId}', 
+				'${highWinStat.signatureTreasureCardId}', 
+				'${highWinStat.treasuresCardIds.join(',')}', 
+				'${highWinStat.runId}', 
+				${highWinStat.wins}, 
+				${highWinStat.losses}, 
+				${highWinStat.rating}, 
+				'${highWinStat.runStartDate}'
+			)
+		`;
+		await mysql.query(insertHighWinsQuery);
+	}
 	await mysql.end();
 };
 
