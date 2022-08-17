@@ -261,24 +261,24 @@ export const saveReplayInReplaySummary = async (
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		// duels-leaderboard
-		sns.notifyDuelsReviewPublished(reviewToNotify);
+		// sns.notifyDuelsReviewPublished(reviewToNotify);
 
 		const [wins, losses] = additionalResult.split('-').map(info => parseInt(info));
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
 			// trigger-build-duels-12-wins
-			sns.notifyDuels12winsReviewPublished(reviewToNotify);
+			// sns.notifyDuels12winsReviewPublished(reviewToNotify);
 		}
 
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost')) {
 			// trigger-build-duels-run-stats
-			sns.notifyDuelsRunEndPublished(reviewToNotify);
+			// sns.notifyDuelsRunEndPublished(reviewToNotify);
 		}
 	} else if (['ranked'].includes(gameMode)) {
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
 	} else if (['battlegrounds', 'battlegrounds-friendly'].includes(gameMode)) {
 		// trigger-build-bgs-run-stats
-		sns.notifyBattlegroundsReviewPublished(reviewToNotify);
+		// sns.notifyBattlegroundsReviewPublished(reviewToNotify);
 	} else if (
 		[
 			// 'mercenaries-pve',
@@ -289,7 +289,7 @@ export const saveReplayInReplaySummary = async (
 		].includes(gameMode)
 	) {
 		// trigger-build-mercenaries-match-stats
-		sns.notifyMercenariesReviewPublished(reviewToNotify);
+		// sns.notifyMercenariesReviewPublished(reviewToNotify);
 	}
 	logger.debug('notifs sent');
 
