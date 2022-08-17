@@ -4,6 +4,7 @@ import {
 	AllCardsService,
 	allDuelsHeroes,
 	CardClass,
+	CardIds,
 	duelsHeroConfigs,
 	GameFormat,
 	normalizeDuelsHeroCardId,
@@ -45,23 +46,42 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 
 	// Discard the info if multiple classes are in the same run
 	const uniqueHeroes = [
-		...new Set(allDecksResults.map(result => result.playerCardId).filter(hero => allDuelsHeroes.includes(hero))),
+		...new Set(
+			allDecksResults
+				.map(result => result.playerCardId)
+				.map(hero => normalizeDuelsHeroCardId(hero))
+				.filter(hero => allDuelsHeroes.includes(hero as CardIds)),
+		),
 	];
 	if (uniqueHeroes.length !== 1) {
-		logger.error('corrupted run', runId, uniqueHeroes);
+		logger.error(
+			'corrupted run',
+			runId,
+			uniqueHeroes,
+			allDecksResults.map(result => result.playerCardId),
+			replayInfo.reviewMessage,
+		);
 		await mysql.end();
 		return;
 	}
 
 	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
 	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
-		console.error('missing game/loot info for run end', lootResults, firstGameResult);
+		console.error(
+			'missing game/loot info for run end',
+			runId,
+			lootResults,
+			firstGameResult,
+			allDecksResults.map(r => r.additionalResult),
+			replayInfo.reviewMessage,
+		);
 		await mysql.end();
 		return;
 	}
 
 	const heroPowerNodes = lootResults.filter(result => result.bundleType === 'hero-power');
 	if (heroPowerNodes.length !== 1) {
+		logger.error('corrupted run (hero pwoers)', runId, uniqueHeroes, replayInfo.reviewMessage);
 		await mysql.end();
 		return;
 	}
@@ -74,7 +94,12 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 	const periodDate = new Date(message.creationDate);
 	const decklist = cleanDecklist(firstGameInRun.playerDecklist, firstGameInRun.playerCardId, cards);
 	if (!decklist) {
-		logger.error('invalid decklist', firstGameInRun.playerDecklist, firstGameInRun.playerCardId);
+		logger.error(
+			'invalid decklist',
+			firstGameInRun.playerDecklist,
+			firstGameInRun.playerCardId,
+			replayInfo.reviewMessage,
+		);
 		await mysql.end();
 		return null;
 	}
@@ -106,46 +131,47 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 
 	try {
 		const insertQuery = `
-		INSERT INTO duels_stats_by_run 
-		(
-			gameMode, 
-			runStartDate, 
-			runEndDate, 
-			buildNumber, 
-			rating,
-			runId,
-			playerClass, 
-			decklist,
-			finalDecklist,
-			hero,
-			heroPower,
-			signatureTreasure,
-			treasures,
-			passives,
-			wins,
-			losses
-		)
-		VALUES 
-		(
-			${SqlString.escape(row.gameMode)},
-			${SqlString.escape(row.runStartDate)}, 
-			${SqlString.escape(row.runEndDate)}, 
-			${SqlString.escape(row.buildNumber)},
-			${SqlString.escape(row.rating)},
-			${SqlString.escape(row.runId)},
-			${SqlString.escape(row.playerClass)},
-			${SqlString.escape(decklist)},
-			${SqlString.escape(finalDecklist)},
-			${SqlString.escape(row.hero)},
-			${SqlString.escape(row.heroPower)},
-			${SqlString.escape(row.signatureTreasure)},
-			${SqlString.escape(row.treasures)},
-			${SqlString.escape(row.passives)},
-			${SqlString.escape(row.wins)},
-			${SqlString.escape(row.losses)}
-		)
-	`;
-		logger.debug('running query', insertQuery);
+			INSERT INTO duels_stats_by_run 
+			(
+				gameMode, 
+				runStartDate, 
+				runEndDate, 
+				buildNumber, 
+				rating,
+				runId,
+				playerClass, 
+				decklist,
+				finalDecklist,
+				hero,
+				heroPower,
+				signatureTreasure,
+				treasures,
+				passives,
+				wins,
+				losses
+			)
+			VALUES 
+			(
+				${SqlString.escape(row.gameMode)},
+				${SqlString.escape(row.runStartDate)}, 
+				${SqlString.escape(row.runEndDate)}, 
+				${SqlString.escape(row.buildNumber)},
+				${SqlString.escape(row.rating)},
+				${SqlString.escape(row.runId)},
+				${SqlString.escape(row.playerClass)},
+				${SqlString.escape(decklist)},
+				${SqlString.escape(finalDecklist)},
+				${SqlString.escape(row.hero)},
+				${SqlString.escape(row.heroPower)},
+				${SqlString.escape(row.signatureTreasure)},
+				${SqlString.escape(row.treasures)},
+				${SqlString.escape(row.passives)},
+				${SqlString.escape(row.wins)},
+				${SqlString.escape(row.losses)}
+			)
+		`;
+		// Running as log to debug double queries
+		logger.log('running query', insertQuery, replayInfo.reviewMessage);
 		await mysql.query(insertQuery);
 	} catch (e) {
 		logger.error('could not execute query', e);
@@ -175,7 +201,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 
 		const insertHighWinsQuery = `
 			INSERT INTO duels_stats_deck 
-			(gameMode, periodStart, playerClass, decklist, finalDecklist, heroCardId, heroPowerCardId, signatureTreasureCardId, treasuresCardIds, runId, wins, losses, rating, runStartDate)
+			(gameMode, periodStart, playerClass, decklist, finalDecklist, heroCardId, heroPowerCardId, signatureTreasureCardId, treasuresCardIds, runId, wins, losses, rating, runStartDate, buildNumber)
 			VALUES 
 			(
 				'${message.gameMode}',
@@ -191,7 +217,8 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 				${highWinStat.wins}, 
 				${highWinStat.losses}, 
 				${highWinStat.rating}, 
-				'${highWinStat.runStartDate}'
+				'${highWinStat.runStartDate}',
+				'${message.buildNumber}'
 			)
 		`;
 		await mysql.query(insertHighWinsQuery);
