@@ -5,6 +5,7 @@ import { AllCardsService } from '@firestone-hs/reference-data';
 import { inflate } from 'pako';
 import { ServerlessMysql } from 'serverless-mysql';
 import SqlString from 'sqlstring';
+import { nullIfEmpty } from './010_replay-summary';
 import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
 
@@ -30,7 +31,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	// Handling skins
 	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
 
-	const warbandStats = await buildWarbandStats(replayInfo);
+	const warbandStats = await buildWarbandStats(replayInfo, allCards);
 	// Because there is a race, the combat winrate might have been populated first
 	const mysql = await getConnection();
 	const combatWinrate = await retrieveCombatWinrate(message, mysql);
@@ -50,6 +51,10 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		darkmoonPrizes: false,
 		warbandStats: warbandStats,
 		combatWinrate: combatWinrate,
+		quests: message.bgsHasQuests,
+		bgsHeroQuests: message.bgsHeroQuests,
+		bgsQuestsCompletedTimings: message.bgsQuestsCompletedTimings,
+		bgsHeroQuestRewards: message.bgsHeroQuestRewards,
 	} as InternalBgsRow;
 
 	const insertQuery = `
@@ -64,7 +69,11 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			darkmoonPrizes,
 			tribes,
 			combatWinrate,
-			warbandStats
+			warbandStats,
+			quests,
+			bgsHeroQuests,
+			bgsQuestsCompletedTimings,
+			bgsHeroQuestRewards
 		)
 		VALUES 
 		(
@@ -77,7 +86,11 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			${SqlString.escape(row.darkmoonPrizes)},
 			${SqlString.escape(row.tribes)},
 			${SqlString.escape(JSON.stringify(row.combatWinrate))},
-			${SqlString.escape(JSON.stringify(row.warbandStats))}
+			${SqlString.escape(JSON.stringify(row.warbandStats))},
+			${SqlString.escape(row.quests)},
+			${nullIfEmpty(row.bgsHeroQuests?.join(','))},
+			${nullIfEmpty(row.bgsQuestsCompletedTimings?.join(','))},
+			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))}
 		)
 	`;
 	logger.debug('running query', insertQuery);
@@ -85,10 +98,13 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	await mysql.end();
 };
 
-const buildWarbandStats = async (replayInfo: ReplayInfo): Promise<readonly InternalWarbandStats[]> => {
+const buildWarbandStats = async (
+	replayInfo: ReplayInfo,
+	allCards: AllCardsService,
+): Promise<readonly InternalWarbandStats[]> => {
 	try {
 		const replayString = replayInfo.replayString;
-		const stats = parseBattlegroundsGame(replayString, null, null, null);
+		const stats = parseBattlegroundsGame(replayString, null, null, null, allCards);
 		replayInfo.bgsPostMatchStats = stats;
 		const result = stats.totalStatsOverTurn.map(stat => ({
 			turn: stat.turn,
@@ -182,6 +198,10 @@ interface InternalBgsRow {
 	readonly darkmoonPrizes: boolean;
 	readonly combatWinrate: readonly InternalCombatWinrate[];
 	readonly warbandStats: readonly InternalWarbandStats[];
+	readonly quests: boolean;
+	readonly bgsHeroQuests: readonly string[];
+	readonly bgsQuestsCompletedTimings: readonly number[];
+	readonly bgsHeroQuestRewards: readonly string[];
 }
 
 interface InternalCombatWinrate {

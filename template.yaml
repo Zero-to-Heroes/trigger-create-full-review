@@ -61,7 +61,7 @@ Resources:
             Timeout: 60
             CodeUri: ./dist/create-full-review
             MemorySize: 700 # Increase memory to be able to handle big games like BGS
-            ReservedConcurrentExecutions: 40
+            ReservedConcurrentExecutions: 50
             Tags:
                 LambdaName: trigger-create-full-review
             Policies:

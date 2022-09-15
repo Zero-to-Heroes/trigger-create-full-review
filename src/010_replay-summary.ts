@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { getConnection, logger, S3 } from '@firestone-hs/aws-lambda-utils';
-import { parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { BgsHeroQuest, parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
 import { decode } from 'deckstrings';
@@ -120,6 +120,7 @@ export const saveReplayInReplaySummary = async (
 	const availableTribes = extractTribes(metadata['available-races']);
 	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
 
+	const quests: readonly BgsHeroQuest[] = gameMode === 'battlegrounds' ? replay.bgsHeroQuests ?? [] : [];
 	const reviewToNotify: ReviewMessage = {
 		reviewId: reviewId,
 		creationDate: creationDate,
@@ -159,6 +160,10 @@ export const saveReplayInReplaySummary = async (
 			: null,
 		region: replay.region,
 		allowGameShare: allowGameShare,
+		bgsHasQuests: replay.hasBgsQuests,
+		bgsHeroQuests: quests.map(q => q.questCardId) as readonly string[],
+		bgsQuestsCompletedTimings: quests.map(q => q.turnCompleted) as readonly number[],
+		bgsHeroQuestRewards: quests.map(q => q.rewardCardId) as readonly string[],
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
@@ -212,7 +217,11 @@ export const saveReplayInReplaySummary = async (
 				mercsBountyId,
 				runId,
 				region,
-				allowGameShare
+				allowGameShare,
+				bgsHasQuests,
+				bgsHeroQuests,
+				bgsQuestsCompletedTimings,
+				bgsHeroQuestRewards
 			)
 			VALUES
 			(
@@ -247,7 +256,11 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(metadata['mercs-bounty-id'])},
 				${nullIfEmpty(runId)},
 				${replay.region},
-				${allowGameShare ? 1 : 0}
+				${allowGameShare ? 1 : 0},
+				${reviewToNotify.bgsHasQuests ? 1 : 0},
+				${nullIfEmpty(quests?.map(q => q.questCardId).join(','))},
+				${nullIfEmpty(quests?.map(q => q.turnCompleted).join(','))},
+				${nullIfEmpty(quests?.map(q => q.rewardCardId).join(','))}
 			)
 		`;
 	logger.debug('running query', query);
@@ -330,7 +343,7 @@ const toCreationDate = (today: Date): string => {
 		.replace('T', ' ')}.${today.getMilliseconds()}`;
 };
 
-const nullIfEmpty = (value: string): string => {
+export const nullIfEmpty = (value: string): string => {
 	return value == null || value == 'null' ? 'NULL' : `${SqlString.escape(value)}`;
 };
 

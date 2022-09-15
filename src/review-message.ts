@@ -37,4 +37,8 @@ export interface ReviewMessage {
 	readonly mercBountyId: number;
 	readonly region: BnetRegion;
 	readonly allowGameShare: boolean;
+	readonly bgsHasQuests: boolean;
+	readonly bgsHeroQuests: readonly string[];
+	readonly bgsQuestsCompletedTimings: readonly number[];
+	readonly bgsHeroQuestRewards: readonly string[];
 }
