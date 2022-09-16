@@ -268,9 +268,6 @@ export const saveReplayInReplaySummary = async (
 	logger.debug('ran query');
 	await mysql.end();
 	logger.debug('closed connection');
-	// trigger-build-match-stats, trigger-sync-data
-	// TODO: move to 'ranked' only
-	sns.notifyReviewPublished(reviewToNotify);
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		// duels-leaderboard
@@ -287,6 +284,7 @@ export const saveReplayInReplaySummary = async (
 			// sns.notifyDuelsRunEndPublished(reviewToNotify);
 		}
 	} else if (['ranked'].includes(gameMode)) {
+		sns.notifyReviewPublished(reviewToNotify);
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
 	} else if (['battlegrounds', 'battlegrounds-friendly'].includes(gameMode)) {
