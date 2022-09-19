@@ -1,3 +1,5 @@
+import { logger } from '@firestone-hs/aws-lambda-utils';
+
 export const isMercenaries = (gameMode: string): boolean => {
 	return [
 		'mercenaries-pve',
@@ -60,7 +62,7 @@ export const getDefaultHeroDbfIdForClass = (playerClass: string): number => {
 		case 'warrior':
 			return 7;
 		default:
-			console.warn('Could not normalize hero card id', playerClass);
+			logger.warn('Could not normalize hero card id', playerClass);
 			return 7;
 	}
 };

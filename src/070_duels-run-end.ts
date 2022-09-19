@@ -67,7 +67,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 
 	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
 	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
-		console.error(
+		logger.error(
 			'missing game/loot info for run end',
 			runId,
 			lootResults,

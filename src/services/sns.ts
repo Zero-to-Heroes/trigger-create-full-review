@@ -1,3 +1,4 @@
+import { logger } from '@firestone-hs/aws-lambda-utils';
 import { SNS } from 'aws-sdk';
 
 export class Sns {
@@ -29,7 +30,7 @@ export class Sns {
 
 	public async notifyBattlegroundsReviewPublished(review: any) {
 		const topic = process.env.BATTLEGROUNDS_REVIEW_PUBLISHED_SNS_TOPIC;
-		console.log('publishing BG review', topic, review);
+		logger.log('publishing BG review', topic, review);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),
@@ -40,7 +41,7 @@ export class Sns {
 
 	public async notifyMercenariesReviewPublished(review: any) {
 		const topic = process.env.MERCENARIES_REVIEW_PUBLISHED_SNS_TOPIC;
-		console.log('publishing mercs review', topic, review);
+		logger.log('publishing mercs review', topic, review);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),

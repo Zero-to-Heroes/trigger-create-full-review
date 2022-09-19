@@ -59,14 +59,14 @@ export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCard
 
 	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
 	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
-		console.error('missing game/loot info for high-wins decks', lootResults, firstGameResult);
+		logger.error('missing game/loot info for high-wins decks', lootResults, firstGameResult);
 		await mysql.end();
 		return;
 	}
 
 	const heroPowerNodes = lootResults.filter(result => result.bundleType === 'hero-power');
 	if (heroPowerNodes.length !== 1 || firstGameResult.length !== 1) {
-		console.error('missing hero power info for high-wins decks', heroPowerNodes, firstGameResult);
+		logger.error('missing hero power info for high-wins decks', heroPowerNodes, firstGameResult);
 		await mysql.end();
 		return;
 	}

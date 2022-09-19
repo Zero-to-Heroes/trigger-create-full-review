@@ -109,7 +109,7 @@ export const saveReplayInReplaySummary = async (
 				playerCardId = cards.getCardFromDbfId(getDefaultHeroDbfIdForClass(playerClass)).id;
 			}
 		} catch (e) {
-			console.error('could not properly parse deckstring', deckstring, e);
+			logger.error('could not properly parse deckstring', deckstring, e);
 		}
 	}
 
