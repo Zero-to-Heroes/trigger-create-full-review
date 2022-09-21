@@ -37,29 +37,29 @@ export default async (event, context): Promise<any> => {
 };
 
 const handleReplay = async (message): Promise<void> => {
-	logger.log('start processing', message);
+	logger.debug('start processing', message);
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
-		logger.log('replayInfo');
+		logger.debug('replayInfo');
 		await buildMatchStats(replayInfo);
-		logger.log('after buildMatchStats');
+		logger.debug('after buildMatchStats');
 		if (['battlegrounds', 'battlegrounds-friendly'].includes(replayInfo.reviewMessage.gameMode)) {
-			logger.log('before buildBgsRunStats');
+			logger.debug('before buildBgsRunStats');
 			await buildBgsRunStats(replayInfo, cards, s3);
-			logger.log('after buildBgsRunStats');
+			logger.debug('after buildBgsRunStats');
 			await buildBgsPostMatchStats(replayInfo, cards, s3);
-			logger.log('after buildBgsPostMatchStats');
+			logger.debug('after buildBgsPostMatchStats');
 		} else if (['mercenaries-pvp'].includes(replayInfo.reviewMessage.gameMode)) {
-			logger.log('before buildMercenariesMatchStats');
+			logger.debug('before buildMercenariesMatchStats');
 			await buildMercenariesMatchStats(replayInfo, cards);
-			logger.log('after buildMercenariesMatchStats');
+			logger.debug('after buildMercenariesMatchStats');
 		} else if (
 			['duels', 'paid-duels'].includes(replayInfo.reviewMessage.gameMode) &&
 			replayInfo.reviewMessage.additionalResult
 		) {
-			logger.log('before updateDuelsLeaderboard');
+			logger.debug('before updateDuelsLeaderboard');
 			await updateDuelsLeaderboard(replayInfo);
-			logger.log('after updateDuelsLeaderboard');
+			logger.debug('after updateDuelsLeaderboard');
 			const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map(info => parseInt(info));
 			// Handled as part of the RunEnd process
 			// if (
@@ -72,9 +72,9 @@ const handleReplay = async (message): Promise<void> => {
 				(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
 				(losses === 2 && replayInfo.reviewMessage.result === 'lost')
 			) {
-				logger.log('before handleDuelsRunEnd');
+				logger.debug('before handleDuelsRunEnd');
 				await handleDuelsRunEnd(replayInfo, cards);
-				logger.log('after handleDuelsRunEnd');
+				logger.debug('after handleDuelsRunEnd');
 			}
 		}
 	}

@@ -30,7 +30,7 @@ export class Sns {
 
 	public async notifyBattlegroundsReviewPublished(review: any) {
 		const topic = process.env.BATTLEGROUNDS_REVIEW_PUBLISHED_SNS_TOPIC;
-		logger.log('publishing BG review', topic, review);
+		logger.debug('publishing BG review', topic, review);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),
@@ -41,7 +41,7 @@ export class Sns {
 
 	public async notifyMercenariesReviewPublished(review: any) {
 		const topic = process.env.MERCENARIES_REVIEW_PUBLISHED_SNS_TOPIC;
-		logger.log('publishing mercs review', topic, review);
+		logger.debug('publishing mercs review', topic, review);
 		await this.sns
 			.publish({
 				Message: JSON.stringify(review),

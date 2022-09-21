@@ -105,7 +105,6 @@ const compositionForTurnParse = (structure: ParsingStructure) => {
 				structure.entities[element.get('entity')].zonePosition = parseInt(element.get('value'));
 			}
 			if (parseInt(element.get('tag')) === GameTag.ATK) {
-				// ATK.log('entity', child.get('entity'), structure.entities[child.get('entity')]);
 				structure.entities[element.get('entity')].atk = parseInt(element.get('value'));
 			}
 			if (parseInt(element.get('tag')) === GameTag.HEALTH) {

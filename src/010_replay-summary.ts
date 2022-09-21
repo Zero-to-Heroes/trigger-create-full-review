@@ -170,7 +170,7 @@ export const saveReplayInReplaySummary = async (
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
-	logger.log('built review message', message, existingReviewResult);
+	// logger.debug('built review message', message, existingReviewResult);
 
 	if (existingReviewResult.length > 0) {
 		const returnMessage = {
@@ -180,13 +180,13 @@ export const saveReplayInReplaySummary = async (
 			replayString: replayString,
 			bgsPostMatchStats: null,
 		};
-		logger.log('returning early', returnMessage);
+		// logger.debug('returning early', returnMessage);
 		return returnMessage;
 	}
 
-	logger.log('Writing file', reviewId);
+	// logger.debug('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	logger.log('file written');
+	// logger.debug('file written');
 
 	const query = `
 			INSERT INTO replay_summary
@@ -272,7 +272,7 @@ export const saveReplayInReplaySummary = async (
 	await mysql.query(query);
 	logger.debug('ran query');
 	await mysql.end();
-	logger.log('closed connection');
+	logger.debug('closed connection');
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		// duels-leaderboard
