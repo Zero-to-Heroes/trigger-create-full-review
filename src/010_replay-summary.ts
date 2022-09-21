@@ -29,6 +29,7 @@ export const saveReplayInReplaySummary = async (
 
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
+	logger.debug('will get replay string', metadata);
 	const replayString = await s3.readZippedContent(bucketName, key);
 	logger.debug('got replayString', bucketName, key);
 	if (!replayString) {
@@ -73,6 +74,7 @@ export const saveReplayInReplaySummary = async (
 
 	let replay: Replay;
 	try {
+		logger.debug('will parse replay string');
 		replay = parseHsReplayString(replayString, cards as any);
 	} catch (e) {
 		logger.error('Could not parse replay', e, message);
@@ -113,6 +115,7 @@ export const saveReplayInReplaySummary = async (
 		}
 	}
 
+	logger.debug('checkpoint 1');
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
 	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
@@ -167,21 +170,23 @@ export const saveReplayInReplaySummary = async (
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
-	logger.debug('built review message', message);
+	logger.log('built review message', message, existingReviewResult);
 
 	if (existingReviewResult.length > 0) {
-		return {
+		const returnMessage = {
 			userName: userName,
 			replay: replay,
 			reviewMessage: reviewToNotify,
 			replayString: replayString,
 			bgsPostMatchStats: null,
 		};
+		logger.log('returning early', returnMessage);
+		return returnMessage;
 	}
 
-	logger.debug('Writing file', reviewId);
+	logger.log('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	logger.debug('file written');
+	logger.log('file written');
 
 	const query = `
 			INSERT INTO replay_summary
@@ -267,7 +272,7 @@ export const saveReplayInReplaySummary = async (
 	await mysql.query(query);
 	logger.debug('ran query');
 	await mysql.end();
-	logger.debug('closed connection');
+	logger.log('closed connection');
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		// duels-leaderboard

@@ -40,42 +40,42 @@ const handleReplay = async (message): Promise<void> => {
 	logger.log('start processing', message);
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
-		const useNewProcess = true;
-		if (useNewProcess) {
-			logger.debug('new process', replayInfo.reviewMessage);
-			await buildMatchStats(replayInfo);
-			if (['battlegrounds', 'battlegrounds-friendly'].includes(replayInfo.reviewMessage.gameMode)) {
-				await buildBgsRunStats(replayInfo, cards, s3);
-				await buildBgsPostMatchStats(replayInfo, cards, s3);
-			} else if (['mercenaries-pvp'].includes(replayInfo.reviewMessage.gameMode)) {
-				await buildMercenariesMatchStats(replayInfo, cards);
-			} else if (
-				['duels', 'paid-duels'].includes(replayInfo.reviewMessage.gameMode) &&
-				replayInfo.reviewMessage.additionalResult
-			) {
-				await updateDuelsLeaderboard(replayInfo);
-				const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map(info => parseInt(info));
-				// Handled as part of the RunEnd process
-				// if (
-				// 	(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
-				// 	(losses === 2 && replayInfo.reviewMessage.result === 'lost' && wins >= 10)
-				// ) {
-				// 	await handleDuelsHighWins(replayInfo, cards);
-				// }
-				if (
-					(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
-					(losses === 2 && replayInfo.reviewMessage.result === 'lost')
-				) {
-					await handleDuelsRunEnd(replayInfo, cards);
-				}
-			}
-		}
-
-		if (
-			replayInfo.reviewMessage.userName === 'setter90' ||
-			replayInfo.reviewMessage.userId === 'OW_0a4096f8-8785-4a3b-9491-3744c4150c0c'
+		logger.log('replayInfo');
+		await buildMatchStats(replayInfo);
+		logger.log('after buildMatchStats');
+		if (['battlegrounds', 'battlegrounds-friendly'].includes(replayInfo.reviewMessage.gameMode)) {
+			logger.log('before buildBgsRunStats');
+			await buildBgsRunStats(replayInfo, cards, s3);
+			logger.log('after buildBgsRunStats');
+			await buildBgsPostMatchStats(replayInfo, cards, s3);
+			logger.log('after buildBgsPostMatchStats');
+		} else if (['mercenaries-pvp'].includes(replayInfo.reviewMessage.gameMode)) {
+			logger.log('before buildMercenariesMatchStats');
+			await buildMercenariesMatchStats(replayInfo, cards);
+			logger.log('after buildMercenariesMatchStats');
+		} else if (
+			['duels', 'paid-duels'].includes(replayInfo.reviewMessage.gameMode) &&
+			replayInfo.reviewMessage.additionalResult
 		) {
-			logger.error('dumping debug logs');
+			logger.log('before updateDuelsLeaderboard');
+			await updateDuelsLeaderboard(replayInfo);
+			logger.log('after updateDuelsLeaderboard');
+			const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map(info => parseInt(info));
+			// Handled as part of the RunEnd process
+			// if (
+			// 	(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
+			// 	(losses === 2 && replayInfo.reviewMessage.result === 'lost' && wins >= 10)
+			// ) {
+			// 	await handleDuelsHighWins(replayInfo, cards);
+			// }
+			if (
+				(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
+				(losses === 2 && replayInfo.reviewMessage.result === 'lost')
+			) {
+				logger.log('before handleDuelsRunEnd');
+				await handleDuelsRunEnd(replayInfo, cards);
+				logger.log('after handleDuelsRunEnd');
+			}
 		}
 	}
 };
