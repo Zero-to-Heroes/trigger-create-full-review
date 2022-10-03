@@ -106,7 +106,9 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 
 	const statsQuery = buildInsertQuery(message, statsFromGame, allCards, mercenariesReferenceData);
 	// logger.debug('running query', statsQuery);
-	await mysql.query(statsQuery);
+	if (!!statsQuery) {
+		await mysql.query(statsQuery);
+	}
 	await mysql.end();
 };
 
@@ -123,20 +125,23 @@ export const buildInsertQuery = (
 	const uniqueHeroIds = statsFromGame
 		.filter(stat => stat.statName === 'mercs-hero-timing')
 		.map(stat => stat.statValue)
+		.filter(value => value)
 		.map(value => value.split('|')[0]);
+	if (!uniqueHeroIds?.length) {
+		return null;
+	}
 	const values = uniqueHeroIds
 		.map(heroCardId => {
-			const heroTiming = parseInt(
-				statsFromGame
-					.filter(stat => stat.statName === 'mercs-hero-timing')
-					.map(stat => stat.statValue)
-					.find(value => value.startsWith(heroCardId))
-					.split('|')[1],
-			);
+			const rawTiming = statsFromGame
+				.filter(stat => stat.statName === 'mercs-hero-timing')
+				.map(stat => stat.statValue)
+				.find(value => value.startsWith(heroCardId));
+			const heroTiming = !!rawTiming ? parseInt(rawTiming.split('|')[1]) : null;
 			// Find the only equipment that could fit the hero
 			const allEquipmentCardIds = statsFromGame
 				.filter(stat => stat.statName === 'mercs-hero-equipment')
-				.map(stat => stat.statValue.split('|')[1]);
+				.map(stat => stat.statValue?.split('|')[1])
+				.filter(value => !!value);
 			// logger.debug(
 			// 	'allEquipmentCardIds',
 			// 	allEquipmentCardIds,
@@ -161,13 +166,11 @@ export const buildInsertQuery = (
 				mercenariesReferenceData,
 			);
 			// logger.debug('spellsForHero', spellsForHero);
-			const heroLevel = parseInt(
-				statsFromGame
-					.filter(stat => stat.statName === 'mercs-hero-level')
-					.map(stat => stat.statValue)
-					.find(level => level.startsWith(heroCardId))
-					.split('|')[1],
-			);
+			const rawLevel = statsFromGame
+				.filter(stat => stat.statName === 'mercs-hero-level')
+				.map(stat => stat.statValue)
+				.find(level => level.startsWith(heroCardId));
+			const heroLevel = !!rawLevel ? parseInt(rawLevel.split('|')[1]) : null;
 			return `(
 				${escape(message.creationDate)},
 				${escape(message.reviewId)},
@@ -194,6 +197,7 @@ export const buildInsertQuery = (
 			)`;
 		})
 		.join(',\n');
+
 	const statsQuery = `
 		INSERT INTO mercenaries_match_stats
 		(
