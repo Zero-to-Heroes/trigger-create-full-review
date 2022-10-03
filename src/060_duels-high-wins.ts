@@ -1,195 +1,195 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
-import {
-	AllCardsService,
-	allDuelsHeroes,
-	allDuelsSignatureTreasures,
-	CardIds,
-	GameFormat,
-} from '@firestone-hs/reference-data';
-import { DeckDefinition, decode, encode } from 'deckstrings';
-import { DeckStat } from './06_duels-high-wins/deck-stat';
-import { ReplayInfo } from './create-full-review';
-import { formatDate, toCreationDate } from './services/utils';
+// /* eslint-disable @typescript-eslint/no-use-before-define */
+// import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
+// import {
+// 	AllCardsService,
+// 	allDuelsHeroes,
+// 	allDuelsSignatureTreasures,
+// 	CardIds,
+// 	GameFormat,
+// } from '@firestone-hs/reference-data';
+// import { DeckDefinition, decode, encode } from 'deckstrings';
+// import { DeckStat } from './06_duels-high-wins/deck-stat';
+// import { ReplayInfo } from './create-full-review';
+// import { formatDate, toCreationDate } from './services/utils';
 
-export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCardsService) => {
-	const message = replayInfo.reviewMessage;
-	logger.debug('handling message', message);
-	if (!message.allowGameShare) {
-		logger.log('not allowing game share for duels high wins', message);
-		return;
-	}
+// export const handleDuelsHighWins = async (replayInfo: ReplayInfo, cards: AllCardsService) => {
+// 	const message = replayInfo.reviewMessage;
+// 	logger.debug('handling message', message);
+// 	if (!message.allowGameShare) {
+// 		logger.log('not allowing game share for duels high wins', message);
+// 		return;
+// 	}
 
-	const runId = message.currentDuelsRunId ?? message.runId;
-	if (!runId) {
-		logger.error('runId empty', message);
-		return;
-	}
+// 	const runId = message.currentDuelsRunId ?? message.runId;
+// 	if (!runId) {
+// 		logger.error('runId empty', message);
+// 		return;
+// 	}
 
-	const mysql = await getConnection();
-	const lootQuery = `
-			SELECT bundleType, 
-			CASE  
-				WHEN chosenOptionIndex = 1 THEN option1 
-				WHEN chosenOptionIndex = 2 THEN option2  
-				ELSE option3 END as pickedTreasure 
-			FROM dungeon_run_loot_info
-			WHERE runId = '${runId}'
-			AND bundleType IN ('treasure', 'hero-power', 'signature-treasure') 
-		`;
-	const lootResults: readonly any[] = await mysql.query(lootQuery);
+// 	const mysql = await getConnection();
+// 	const lootQuery = `
+// 			SELECT bundleType,
+// 			CASE
+// 				WHEN chosenOptionIndex = 1 THEN option1
+// 				WHEN chosenOptionIndex = 2 THEN option2
+// 				ELSE option3 END as pickedTreasure
+// 			FROM dungeon_run_loot_info
+// 			WHERE runId = '${runId}'
+// 			AND bundleType IN ('treasure', 'hero-power', 'signature-treasure')
+// 		`;
+// 	const lootResults: readonly any[] = await mysql.query(lootQuery);
 
-	const query = `
-			SELECT x1.creationDate, x1.playerClass, x1.playerCardId, x1.playerRank, x1.playerDecklist, x1.additionalResult
-			FROM replay_summary x1 
-			WHERE x1.runId = '${runId}'
-			AND x1.playerDecklist IS NOT null 
-		`;
-	const allDecksResults: readonly any[] = await mysql.query(query);
+// 	const query = `
+// 			SELECT x1.creationDate, x1.playerClass, x1.playerCardId, x1.playerRank, x1.playerDecklist, x1.additionalResult
+// 			FROM replay_summary x1
+// 			WHERE x1.runId = '${runId}'
+// 			AND x1.playerDecklist IS NOT null
+// 		`;
+// 	const allDecksResults: readonly any[] = await mysql.query(query);
 
-	// Discard the info if multiple classes are in the same run
-	const uniqueHeroes = [
-		...new Set(allDecksResults.map(result => result.playerCardId).filter(hero => allDuelsHeroes.includes(hero))),
-	];
-	if (uniqueHeroes.length !== 1) {
-		logger.error('corrupted run', runId, uniqueHeroes);
-		await mysql.end();
-		return;
-	}
+// 	// Discard the info if multiple classes are in the same run
+// 	const uniqueHeroes = [
+// 		...new Set(allDecksResults.map(result => result.playerCardId).filter(hero => allDuelsHeroes.includes(hero))),
+// 	];
+// 	if (uniqueHeroes.length !== 1) {
+// 		logger.error('corrupted run', runId, uniqueHeroes);
+// 		await mysql.end();
+// 		return;
+// 	}
 
-	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
-	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
-		logger.error('missing game/loot info for high-wins decks', lootResults, firstGameResult);
-		await mysql.end();
-		return;
-	}
+// 	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
+// 	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
+// 		logger.error('missing game/loot info for high-wins decks', lootResults, firstGameResult);
+// 		await mysql.end();
+// 		return;
+// 	}
 
-	const heroPowerNodes = lootResults.filter(result => result.bundleType === 'hero-power');
-	if (heroPowerNodes.length !== 1 || firstGameResult.length !== 1) {
-		logger.error('missing hero power info for high-wins decks', heroPowerNodes, firstGameResult);
-		await mysql.end();
-		return;
-	}
+// 	const heroPowerNodes = lootResults.filter(result => result.bundleType === 'hero-power');
+// 	if (heroPowerNodes.length !== 1 || firstGameResult.length !== 1) {
+// 		logger.error('missing hero power info for high-wins decks', heroPowerNodes, firstGameResult);
+// 		await mysql.end();
+// 		return;
+// 	}
 
-	const heroPowerNode = heroPowerNodes[0];
-	const finalDecklist = message.playerDecklist;
-	const [wins, losses] = message.additionalResult.split('-').map(info => parseInt(info));
-	if (wins < 10) {
-		logger.error('invalid number of wins', message.additionalResult);
-		await mysql.end();
-		return null;
-	}
+// 	const heroPowerNode = heroPowerNodes[0];
+// 	const finalDecklist = message.playerDecklist;
+// 	const [wins, losses] = message.additionalResult.split('-').map(info => parseInt(info));
+// 	if (wins < 10) {
+// 		logger.error('invalid number of wins', message.additionalResult);
+// 		await mysql.end();
+// 		return null;
+// 	}
 
-	const firstGameInRun = firstGameResult[0];
-	const periodDate = formatDate(new Date());
-	const decklist = cleanDecklist(firstGameInRun.playerDecklist, firstGameInRun.playerCardId, cards);
-	if (!decklist) {
-		logger.error('invalid decklist', firstGameInRun.playerDecklist, firstGameInRun.playerCardId);
-		await mysql.end();
-		return null;
-	}
+// 	const firstGameInRun = firstGameResult[0];
+// 	const periodDate = formatDate(new Date());
+// 	const decklist = cleanDecklist(firstGameInRun.playerDecklist, firstGameInRun.playerCardId, cards);
+// 	if (!decklist) {
+// 		logger.error('invalid decklist', firstGameInRun.playerDecklist, firstGameInRun.playerCardId);
+// 		await mysql.end();
+// 		return null;
+// 	}
 
-	const rating = allDecksResults.find(result => result.playerRank != null)?.playerRank;
-	logger.debug('rating', rating, allDecksResults);
-	const stat = {
-		periodStart: periodDate,
-		playerClass: firstGameInRun.playerClass,
-		finalDecklist: finalDecklist,
-		decklist: decklist,
-		heroCardId: message.playerCardId,
-		heroPowerCardId: heroPowerNode.pickedTreasure,
-		signatureTreasureCardId: findSignatureTreasureCardId(lootResults, heroPowerNode.runId),
-		treasuresCardIds: findTreasuresCardIds(lootResults, heroPowerNode.runId),
-		runId: runId,
-		wins: wins + (message.result === 'won' ? 1 : 0),
-		losses: losses + (message.result === 'lost' ? 1 : 0),
-		rating: rating,
-		runStartDate: toCreationDate(firstGameInRun.creationDate),
-	} as DeckStat;
+// 	const rating = allDecksResults.find(result => result.playerRank != null)?.playerRank;
+// 	logger.debug('rating', rating, allDecksResults);
+// 	const stat = {
+// 		periodStart: periodDate,
+// 		playerClass: firstGameInRun.playerClass,
+// 		finalDecklist: finalDecklist,
+// 		decklist: decklist,
+// 		heroCardId: message.playerCardId,
+// 		heroPowerCardId: heroPowerNode.pickedTreasure,
+// 		signatureTreasureCardId: findSignatureTreasureCardId(lootResults, heroPowerNode.runId),
+// 		treasuresCardIds: findTreasuresCardIds(lootResults, heroPowerNode.runId),
+// 		runId: runId,
+// 		wins: wins + (message.result === 'won' ? 1 : 0),
+// 		losses: losses + (message.result === 'lost' ? 1 : 0),
+// 		rating: rating,
+// 		runStartDate: toCreationDate(firstGameInRun.creationDate),
+// 	} as DeckStat;
 
-	const insertQuery = `
-			INSERT INTO duels_stats_deck 
-			(gameMode, periodStart, playerClass, decklist, finalDecklist, heroCardId, heroPowerCardId, signatureTreasureCardId, treasuresCardIds, runId, wins, losses, rating, runStartDate)
-			VALUES 
-			(
-				'${message.gameMode}',
-				'${stat.periodStart}', 
-				'${stat.playerClass}', 
-				'${stat.decklist}', 
-				'${stat.finalDecklist}', 
-				'${stat.heroCardId}', 
-				'${stat.heroPowerCardId}', 
-				'${stat.signatureTreasureCardId}', 
-				'${stat.treasuresCardIds.join(',')}', 
-				'${stat.runId}', 
-				${stat.wins}, 
-				${stat.losses}, 
-				${stat.rating}, 
-				'${stat.runStartDate}'
-			)
-		`;
-	await mysql.query(insertQuery);
-	await mysql.end();
-};
+// 	const insertQuery = `
+// 			INSERT INTO duels_stats_deck
+// 			(gameMode, periodStart, playerClass, decklist, finalDecklist, heroCardId, heroPowerCardId, signatureTreasureCardId, treasuresCardIds, runId, wins, losses, rating, runStartDate)
+// 			VALUES
+// 			(
+// 				'${message.gameMode}',
+// 				'${stat.periodStart}',
+// 				'${stat.playerClass}',
+// 				'${stat.decklist}',
+// 				'${stat.finalDecklist}',
+// 				'${stat.heroCardId}',
+// 				'${stat.heroPowerCardId}',
+// 				'${stat.signatureTreasureCardId}',
+// 				'${stat.treasuresCardIds.join(',')}',
+// 				'${stat.runId}',
+// 				${stat.wins},
+// 				${stat.losses},
+// 				${stat.rating},
+// 				'${stat.runStartDate}'
+// 			)
+// 		`;
+// 	await mysql.query(insertQuery);
+// 	await mysql.end();
+// };
 
-const cleanDecklist = (initialDecklist: string, playerCardId: string, cards: AllCardsService): string => {
-	const decoded = decode(initialDecklist);
-	const validCards = decoded.cards
-		.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible)
-		.filter(dbfCardId => !allDuelsSignatureTreasures.includes(cards.getCardFromDbfId(dbfCardId[0]).id as CardIds));
-	if (validCards.length !== 15) {
-		logger.log('valid cards', validCards);
-		logger.error('Invalid deck list', initialDecklist, decoded, validCards);
-		return null;
-	}
-	const hero = getHero(playerCardId, cards);
-	const newDeck: DeckDefinition = {
-		cards: validCards,
-		heroes: !hero ? decoded.heroes : [hero],
-		format: GameFormat.FT_WILD,
-	};
-	const newDeckstring = encode(newDeck);
-	return newDeckstring;
-};
+// const cleanDecklist = (initialDecklist: string, playerCardId: string, cards: AllCardsService): string => {
+// 	const decoded = decode(initialDecklist);
+// 	const validCards = decoded.cards
+// 		.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible)
+// 		.filter(dbfCardId => !allDuelsSignatureTreasures.includes(cards.getCardFromDbfId(dbfCardId[0]).id as CardIds));
+// 	if (validCards.length !== 15) {
+// 		logger.log('valid cards', validCards);
+// 		logger.error('Invalid deck list', initialDecklist, decoded, validCards);
+// 		return null;
+// 	}
+// 	const hero = getHero(playerCardId, cards);
+// 	const newDeck: DeckDefinition = {
+// 		cards: validCards,
+// 		heroes: !hero ? decoded.heroes : [hero],
+// 		format: GameFormat.FT_WILD,
+// 	};
+// 	const newDeckstring = encode(newDeck);
+// 	return newDeckstring;
+// };
 
-const getHero = (playerCardId: string, cards: AllCardsService): number => {
-	const playerClass: string = cards.getCard(playerCardId)?.playerClass;
-	switch (playerClass) {
-		case 'DemonHunter':
-		case 'Demonhunter':
-			return 56550;
-		case 'Druid':
-			return 274;
-		case 'Hunter':
-			return 31;
-		case 'Mage':
-			return 637;
-		case 'Paladin':
-			return 671;
-		case 'Priest':
-			return 813;
-		case 'Rogue':
-			return 930;
-		case 'Shaman':
-			return 1066;
-		case 'Warlock':
-			return 893;
-		case 'Warrior':
-		default:
-			return 7;
-	}
-};
+// const getHero = (playerCardId: string, cards: AllCardsService): number => {
+// 	const playerClass: string = cards.getCard(playerCardId)?.playerClass;
+// 	switch (playerClass) {
+// 		case 'DemonHunter':
+// 		case 'Demonhunter':
+// 			return 56550;
+// 		case 'Druid':
+// 			return 274;
+// 		case 'Hunter':
+// 			return 31;
+// 		case 'Mage':
+// 			return 637;
+// 		case 'Paladin':
+// 			return 671;
+// 		case 'Priest':
+// 			return 813;
+// 		case 'Rogue':
+// 			return 930;
+// 		case 'Shaman':
+// 			return 1066;
+// 		case 'Warlock':
+// 			return 893;
+// 		case 'Warrior':
+// 		default:
+// 			return 7;
+// 	}
+// };
 
-const findSignatureTreasureCardId = (decksResults: readonly any[], runId: string): string => {
-	const sigs = decksResults
-		.filter(result => result.runId === runId)
-		.filter(result => result.bundleType === 'signature-treasure');
-	return sigs.length === 0 ? null : sigs[0].pickedTreasure;
-};
+// const findSignatureTreasureCardId = (decksResults: readonly any[], runId: string): string => {
+// 	const sigs = decksResults
+// 		.filter(result => result.runId === runId)
+// 		.filter(result => result.bundleType === 'signature-treasure');
+// 	return sigs.length === 0 ? null : sigs[0].pickedTreasure;
+// };
 
-const findTreasuresCardIds = (decksResults: readonly any[], runId: string): readonly string[] => {
-	return decksResults
-		.filter(result => result.runId === runId)
-		.filter(result => result.bundleType === 'treasure')
-		.map(result => result.pickedTreasure);
-};
+// const findTreasuresCardIds = (decksResults: readonly any[], runId: string): readonly string[] => {
+// 	return decksResults
+// 		.filter(result => result.runId === runId)
+// 		.filter(result => result.bundleType === 'treasure')
+// 		.map(result => result.pickedTreasure);
+// };
