@@ -23,6 +23,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 		return;
 	}
 
+	console.log('processing duels run end', message.runId, message);
 	const mysql = await getConnection();
 	const lootQuery = `
 		SELECT bundleType, 
