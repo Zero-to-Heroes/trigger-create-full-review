@@ -170,7 +170,7 @@ export const saveReplayInReplaySummary = async (
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
-	// logger.debug('built review message', message, existingReviewResult);
+	logger.debug('built review message');
 
 	if (existingReviewResult.length > 0) {
 		const returnMessage = {
@@ -180,16 +180,22 @@ export const saveReplayInReplaySummary = async (
 			replayString: replayString,
 			bgsPostMatchStats: null,
 		};
-		// logger.debug('returning early', returnMessage);
+		logger.debug('returning early', returnMessage);
 		return returnMessage;
 	}
 
-	// logger.debug('Writing file', reviewId);
+	logger.debug('Writing file', reviewId);
 	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	// logger.debug('file written');
+	logger.debug('file written');
 
-	const query = `
-			INSERT INTO replay_summary
+	const existQuery = `
+		SELECT * from replay_summary
+		WHERE reviewId = ${SqlString.escape(reviewId)}
+	`;
+	const existResult: any[] = await mysql.query(existQuery);
+	if (!existResult.length) {
+		const query = `
+			INSERT IGNORE INTO replay_summary
 			(
 				reviewId,
 				creationDate,
@@ -268,9 +274,10 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(quests?.map(q => q.rewardCardId).join(','))}
 			)
 		`;
-	logger.debug('running query', query);
-	await mysql.query(query);
-	logger.debug('ran query');
+		logger.debug('running query', query);
+		await mysql.query(query);
+		logger.debug('ran query');
+	}
 	await mysql.end();
 	logger.debug('closed connection');
 
