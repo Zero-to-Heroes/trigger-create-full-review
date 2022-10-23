@@ -5,7 +5,7 @@ import { ReviewMessage } from '../review-message';
 import { mercsHeroesInfosExtractor } from './heroes-info-extractor';
 import { Stat } from './stat';
 
-export const extractStats = async (
+export const extractMercsStats = async (
 	message: ReviewMessage,
 	replay: Replay,
 	replayString: string,

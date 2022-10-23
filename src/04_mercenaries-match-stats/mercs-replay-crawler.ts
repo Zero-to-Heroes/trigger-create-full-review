@@ -129,6 +129,7 @@ const parseElement = (
 	turnCountWrapper,
 	parseFunctions: readonly ((element: Element) => void)[],
 	populateFunctions: readonly ((currentTurn: number) => void)[],
+	hasParsedEnd = false,
 ) => {
 	parseFunctions.forEach(parseFunction => parseFunction(element));
 	// TODO: externalize turn change function
@@ -146,6 +147,20 @@ const parseElement = (
 		) {
 			// The opponent player id is squeezed because of the duplicate Innkeeper entities, so we
 			// have to rely on the main player
+			hasParsedEnd = true;
+			if (+element.get('entity') === mainPlayerEntityId) {
+				populateFunctions.forEach(populateFunction => populateFunction(turnCountWrapper.currentTurn));
+				turnCountWrapper.currentTurn++;
+			}
+		}
+		if (
+			!hasParsedEnd &&
+			parseInt(element.get('tag')) === GameTag.PLAYSTATE &&
+			[PlayState.WINNING, PlayState.LOSING].includes(parseInt(element.get('value')))
+		) {
+			// The opponent player id is squeezed because of the duplicate Innkeeper entities, so we
+			// have to rely on the main player
+			hasParsedEnd = true;
 			if (+element.get('entity') === mainPlayerEntityId) {
 				populateFunctions.forEach(populateFunction => populateFunction(turnCountWrapper.currentTurn));
 				turnCountWrapper.currentTurn++;
@@ -165,6 +180,7 @@ const parseElement = (
 				turnCountWrapper,
 				parseFunctions,
 				populateFunctions,
+				hasParsedEnd,
 			);
 		}
 	}

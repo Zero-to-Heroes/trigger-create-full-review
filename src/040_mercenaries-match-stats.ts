@@ -4,7 +4,7 @@ import { extractTotalTurns, Replay } from '@firestone-hs/hs-replay-xml-parser/di
 import { AllCardsService, ScenarioId } from '@firestone-hs/reference-data';
 import SqlString from 'sqlstring';
 import { Stat } from './04_mercenaries-match-stats/stat';
-import { extractStats } from './04_mercenaries-match-stats/stats-extractor';
+import { extractMercsStats } from './04_mercenaries-match-stats/stats-extractor';
 import { ReplayInfo } from './create-full-review';
 import { getCardLevel, isMercenaries, normalizeMercCardId } from './hs-utils';
 import { ReviewMessage } from './review-message';
@@ -18,16 +18,17 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 	}
 
 	const scenarioId = +message.scenarioId;
-	if (scenarioId !== ScenarioId.LETTUCE_PVP) {
+	const isPvP = scenarioId === ScenarioId.LETTUCE_PVP || scenarioId === ScenarioId.LETTUCE_PVP_VS_AI;
+	if (!isPvP) {
 		return;
 	}
 
-	if (scenarioId === ScenarioId.LETTUCE_PVP && (!message.playerRank || isNaN(parseInt(message.playerRank)))) {
+	if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
 		return;
 	}
 
 	// Leagues that were formatted
-	if (scenarioId === ScenarioId.LETTUCE_PVP && +message.playerRank >= 1 && +message.playerRank <= 5) {
+	if (+message.playerRank >= 1 && +message.playerRank <= 5) {
 		return;
 	}
 
@@ -53,7 +54,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		return;
 	}
 
-	const statsFromGame: readonly Stat[] = await extractStats(
+	const statsFromGame: readonly Stat[] = await extractMercsStats(
 		message,
 		replay,
 		replayInfo.replayString,
@@ -177,7 +178,11 @@ export const buildInsertQuery = (
 				${escape(scenarioId)},
 				${escape(isNaN(parseInt(message.mercBountyId as any)) ? null : message.mercBountyId)},
 				${escape(message.result)},
-				${escape(scenarioId === ScenarioId.LETTUCE_PVP ? parseInt(message.playerRank) : null)},
+				${escape(
+					scenarioId === ScenarioId.LETTUCE_PVP || scenarioId === ScenarioId.LETTUCE_PVP_VS_AI
+						? parseInt(message.playerRank)
+						: null,
+				)},
 				${escape(['normal', 'heroic', 'legendary'].includes(message.playerRank) ? message.playerRank : null)},
 				${escape(+message.buildNumber)},
 				${escape(heroCardId)},

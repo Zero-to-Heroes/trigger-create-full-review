@@ -1,5 +1,5 @@
 {
-	"name": "trigger-create-full-review",
+	"name": "@firestone-hs/trigger-create-full-review",
 	"version": "1.0.26",
 	"description": "",
 	"scripts": {
@@ -17,10 +17,15 @@
 	"repository": {},
 	"author": "",
 	"license": "MIT",
-	"private": true,
+	"private": false,
+	"main": "dist/public-api.js",
+	"types": "dist/public-api.d.ts",
+	"files": [
+		"dist/**/*"
+	],
 	"dependencies": {
 		"@firestone-hs/aws-lambda-utils": "0.0.31",
-		"@firestone-hs/hs-replay-xml-parser": "0.0.102",
+		"@firestone-hs/hs-replay-xml-parser": "0.0.104",
 		"@firestone-hs/reference-data": "^1.0.24",
 		"@types/elementtree": "^0.1.0",
 		"aws-sdk": "^2.1040.0",
@@ -65,19 +70,5 @@
 		"webpack": "^4.39.3",
 		"webpack-cli": "^3.3.8",
 		"yaml-cfn": "^0.2.2"
-	},
-	"jest": {
-		"transform": {
-			"^.+\\.tsx?$": "ts-jest"
-		},
-		"testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-		"moduleFileExtensions": [
-			"ts",
-			"tsx",
-			"js",
-			"jsx",
-			"json",
-			"node"
-		]
 	}
 }
