@@ -13,13 +13,13 @@ import { HeroesTimingParser } from './parsers/heroes-timing-parser';
 import { OpponentHeroesTimingParser } from './parsers/opponent-heroes-timing-parser';
 import { Stat } from './stat';
 
-export const mercsHeroesInfosExtractor = async (
+export const mercsHeroesInfosExtractor = (
 	message: ReviewMessage,
 	replay: Replay,
 	replayString: string,
 	allCards: AllCardsService,
 	mercenariesReferenceData: MercenariesReferenceData,
-): Promise<readonly Stat[]> => {
+): readonly Stat[] => {
 	// logger.debug('will extract', isMercenaries(message.gameMode), message.gameMode);
 	if (!isMercenaries(message.gameMode)) {
 		return null;

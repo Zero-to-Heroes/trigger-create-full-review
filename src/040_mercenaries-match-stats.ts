@@ -54,7 +54,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		return;
 	}
 
-	const statsFromGame: readonly Stat[] = await extractMercsStats(
+	const statsFromGame: readonly Stat[] = extractMercsStats(
 		message,
 		replay,
 		replayInfo.replayString,

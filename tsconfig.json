@@ -14,7 +14,8 @@
 		"allowSyntheticDefaultImports": true,
 		"resolveJsonModule": true,
 		"inlineSources": true,
-		"sourceRoot": "/",
+		"declaration": true,
+		"outDir": "./dist",
 		"lib": ["dom", "ES2019"],
 		"baseUrl": ".",
 		"typeRoots": ["node_modules/@types"],
@@ -23,6 +24,6 @@
 			"core-js/es7/reflect": ["node_modules/core-js/proposals/reflect-metadata"]
 		}
 	},
-	"include": ["src/**/*"],
+	"include": ["src"],
 	"exclude": ["node_modules/*"]
 }
