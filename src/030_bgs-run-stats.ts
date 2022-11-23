@@ -156,19 +156,17 @@ const parseStats = (inputStats: string): BgsPostMatchStats => {
 	}
 };
 
-const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService = null): string => {
+const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService): string => {
 	if (!heroCardId) {
 		return heroCardId;
 	}
 
 	// Generic handling of BG hero skins, hoping they will keep the same pattern
-	if (allCards) {
-		const heroCard = allCards.getCard(heroCardId);
-		if (!!heroCard?.battlegroundsHeroParentDbfId) {
-			const parentCard = allCards.getCardFromDbfId(heroCard.battlegroundsHeroParentDbfId);
-			if (!!parentCard) {
-				return parentCard.id;
-			}
+	const heroCard = allCards.getCard(heroCardId);
+	if (!!heroCard?.battlegroundsHeroParentDbfId) {
+		const parentCard = allCards.getCardFromDbfId(heroCard.battlegroundsHeroParentDbfId);
+		if (!!parentCard) {
+			return parentCard.id;
 		}
 	}
 
