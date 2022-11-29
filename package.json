@@ -6,7 +6,7 @@
 		"lint": "eslint --color --fix --ext .ts .",
 		"start": "webpack -w --color",
 		"test": "jest",
-		"build": "npm audit fix && webpack --env.buildEnv=prod --color",
+		"build": "webpack --env.buildEnv=prod --color",
 		"package": "sam package --template-file template.yaml --s3-bucket com.zerotoheroes.artifact --output-template-file template.packaged.yaml",
 		"deploy": "sam deploy --template-file template.packaged.yaml --stack-name CreateFullReviewStack --capabilities CAPABILITY_IAM",
 		"clean": "rm -rf -v dist/*",
@@ -26,7 +26,7 @@
 	"dependencies": {
 		"@firestone-hs/aws-lambda-utils": "0.0.31",
 		"@firestone-hs/hs-replay-xml-parser": "0.0.104",
-		"@firestone-hs/reference-data": "^1.0.24",
+		"@firestone-hs/reference-data": "^1.0.40",
 		"@types/elementtree": "^0.1.0",
 		"aws-sdk": "^2.1040.0",
 		"cross-fetch": "^3.1.5",
