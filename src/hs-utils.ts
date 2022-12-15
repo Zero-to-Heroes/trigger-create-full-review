@@ -41,6 +41,8 @@ export const getCardLevel = (cardId: string): number => {
 
 export const getDefaultHeroDbfIdForClass = (playerClass: string): number => {
 	switch (playerClass?.toLowerCase()) {
+		case 'deathknight':
+			return 78065;
 		case 'demonhunter':
 			return 56550;
 		case 'druid':
