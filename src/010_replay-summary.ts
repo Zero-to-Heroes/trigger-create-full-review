@@ -54,9 +54,6 @@ export const saveReplayInReplaySummary = async (
 	const gameFormat: GameFormatString = undefinedAsNull(metadata['game-format']) as GameFormatString;
 	const application = undefinedAsNull(metadata['application-key']);
 	const allowGameShare = getMetadataBool(metadata, 'allow-game-share');
-	if (application !== 'firestone') {
-		return null;
-	}
 
 	const reviewId = metadata['review-id'];
 	const mysql = await getConnection();
