@@ -163,6 +163,7 @@ export const saveReplayInReplaySummary = async (
 		bgsHasQuests: replay.hasBgsQuests,
 		bgsHeroQuests: quests.map(q => q.questCardId) as readonly string[],
 		bgsQuestsCompletedTimings: quests.map(q => q.turnCompleted) as readonly number[],
+		bgsQuestsDifficulties: quests.map(q => q.questDifficulty) as readonly number[],
 		bgsHeroQuestRewards: quests.map(q => q.rewardCardId) as readonly string[],
 	};
 
@@ -229,6 +230,7 @@ export const saveReplayInReplaySummary = async (
 				bgsHasQuests,
 				bgsHeroQuests,
 				bgsQuestsCompletedTimings,
+				bgsQuestsDifficulties,
 				bgsHeroQuestRewards
 			)
 			VALUES
@@ -268,6 +270,7 @@ export const saveReplayInReplaySummary = async (
 				${reviewToNotify.bgsHasQuests ? 1 : 0},
 				${nullIfEmpty(quests?.map(q => q.questCardId).join(','))},
 				${nullIfEmpty(quests?.map(q => q.turnCompleted).join(','))},
+				${nullIfEmpty(quests?.map(q => q.questDifficulty).join(','))},
 				${nullIfEmpty(quests?.map(q => q.rewardCardId).join(','))}
 			)
 		`;

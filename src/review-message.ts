@@ -40,5 +40,6 @@ export interface ReviewMessage {
 	readonly bgsHasQuests: boolean;
 	readonly bgsHeroQuests: readonly string[];
 	readonly bgsQuestsCompletedTimings: readonly number[];
+	readonly bgsQuestsDifficulties: readonly number[];
 	readonly bgsHeroQuestRewards: readonly string[];
 }
