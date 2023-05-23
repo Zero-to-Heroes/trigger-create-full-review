@@ -95,7 +95,7 @@ export const saveReplayInReplaySummary = async (
 	if (gameMode === 'ranked') {
 		try {
 			// Because we might be playing a Maestra deck and ended the game before revealing ourselves
-			const deckDefinition = !!deckstring?.length ? decode(deckstring) : null;
+			const deckDefinition = deckstring?.length ? decode(deckstring) : null;
 			const playerClassFromDeckstring = cards
 				.getCardFromDbfId(deckDefinition?.heroes[0])
 				?.playerClass?.toLowerCase();

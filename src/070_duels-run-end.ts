@@ -2,11 +2,11 @@
 import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
 import {
 	AllCardsService,
-	allDuelsHeroes,
 	CardClass,
 	CardIds,
-	duelsHeroConfigs,
 	GameFormat,
+	allDuelsHeroes,
+	duelsHeroConfigs,
 	normalizeDuelsHeroCardId,
 } from '@firestone-hs/reference-data';
 import { DeckDefinition, decode, encode } from 'deckstrings';
@@ -228,10 +228,10 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 };
 
 const findPlayerClass = (playerClass: string, heroCardId: string): string => {
-	if (!!playerClass?.length) {
+	if (playerClass?.length) {
 		return playerClass;
 	}
-	if (!!heroCardId?.length) {
+	if (heroCardId?.length) {
 		const heroClasses = duelsHeroConfigs.find(c => c.hero === heroCardId)?.heroClasses;
 		return heroClasses?.length ? CardClass[heroClasses[0]]?.toLowerCase() : '';
 	}

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { getConnection, http, logger } from '@firestone-hs/aws-lambda-utils';
-import { extractTotalTurns, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { Replay, extractTotalTurns } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, ScenarioId } from '@firestone-hs/reference-data';
 import SqlString from 'sqlstring';
 import { Stat } from './04_mercenaries-match-stats/stat';
@@ -107,7 +107,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 
 	const statsQuery = buildInsertQuery(message, statsFromGame, allCards, mercenariesReferenceData);
 	// logger.debug('running query', statsQuery);
-	if (!!statsQuery) {
+	if (statsQuery) {
 		await mysql.query(statsQuery);
 	}
 	await mysql.end();
@@ -137,7 +137,7 @@ export const buildInsertQuery = (
 				.filter(stat => stat.statName === 'mercs-hero-timing')
 				.map(stat => stat.statValue)
 				.find(value => value.startsWith(heroCardId));
-			const heroTiming = !!rawTiming ? parseInt(rawTiming.split('|')[1]) : null;
+			const heroTiming = rawTiming ? parseInt(rawTiming.split('|')[1]) : null;
 			// Find the only equipment that could fit the hero
 			const allEquipmentCardIds = statsFromGame
 				.filter(stat => stat.statName === 'mercs-hero-equipment')
@@ -171,7 +171,7 @@ export const buildInsertQuery = (
 				.filter(stat => stat.statName === 'mercs-hero-level')
 				.map(stat => stat.statValue)
 				.find(level => level.startsWith(heroCardId));
-			const heroLevel = !!rawLevel ? parseInt(rawLevel.split('|')[1]) : null;
+			const heroLevel = rawLevel ? parseInt(rawLevel.split('|')[1]) : null;
 			return `(
 				${escape(message.creationDate)},
 				${escape(message.reviewId)},

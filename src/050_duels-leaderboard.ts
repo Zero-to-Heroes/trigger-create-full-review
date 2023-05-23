@@ -23,7 +23,7 @@ export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<vo
 	const mysql = await getConnection();
 	const results: any[] = await mysql.query(query);
 
-	if (!!results?.length) {
+	if (results?.length) {
 		const id = results[0].id;
 		const updateQuery = `
 			UPDATE duels_leaderboard

@@ -57,7 +57,7 @@ Resources:
         Type: AWS::Serverless::Function
         Properties:
             Handler: create-full-review.default
-            Runtime: nodejs12.x
+            Runtime: nodejs16.x
             Timeout: 120
             CodeUri: ./dist/create-full-review
             MemorySize: 900 # Increase memory to be able to handle big games like BGS

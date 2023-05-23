@@ -166,9 +166,9 @@ const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService): str
 
 	// Generic handling of BG hero skins, hoping they will keep the same pattern
 	const heroCard = allCards.getCard(heroCardId);
-	if (!!heroCard?.battlegroundsHeroParentDbfId) {
+	if (heroCard?.battlegroundsHeroParentDbfId) {
 		const parentCard = allCards.getCardFromDbfId(heroCard.battlegroundsHeroParentDbfId);
-		if (!!parentCard) {
+		if (parentCard) {
 			return parentCard.id;
 		}
 	}
