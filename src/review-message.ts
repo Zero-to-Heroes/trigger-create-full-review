@@ -42,4 +42,5 @@ export interface ReviewMessage {
 	readonly bgsQuestsCompletedTimings: readonly number[];
 	readonly bgsQuestsDifficulties: readonly number[];
 	readonly bgsHeroQuestRewards: readonly string[];
+	readonly bgBattleOdds: readonly { turn: number; wonPercent: number }[];
 }

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection, logger, S3 } from '@firestone-hs/aws-lambda-utils';
+import { getConnection, logger, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { inflate } from 'pako';
@@ -9,7 +9,7 @@ import { nullIfEmpty } from './010_replay-summary';
 import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
 
-export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, s3: S3): Promise<void> => {
+export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, sns: Sns): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	if (message.gameMode !== 'battlegrounds' && message.gameMode !== 'battlegrounds-friendly') {
 		logger.debug('not battlegrounds', message);
@@ -31,7 +31,9 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	// Handling skins
 	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
 
-	const warbandStats = await buildWarbandStats(replayInfo, allCards);
+	const replayString = replayInfo.replayString;
+	const bgParsedInfo = parseBattlegroundsGame(replayString, null, null, null, allCards);
+	const warbandStats = await buildWarbandStats(bgParsedInfo, replayInfo);
 	// Because there is a race, the combat winrate might have been populated first
 	const mysql = await getConnection();
 	const combatWinrate = await retrieveCombatWinrate(message, mysql);
@@ -45,7 +47,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		heroCardId: heroCardId,
 		rating: playerRank == null ? null : parseInt(playerRank),
 		tribes: message.availableTribes
-			?.map(tribe => tribe.toString())
+			?.map((tribe) => tribe.toString())
 			.sort()
 			.join(','),
 		darkmoonPrizes: false,
@@ -98,18 +100,29 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	`;
 	logger.debug('running query', insertQuery);
 	await mysql.query(insertQuery);
+
+	const bgPerfectGame = isBgPerfectGame(bgParsedInfo, replayInfo);
+	if (bgPerfectGame) {
+		sns.notify(process.env.BG_PERFECT_GAME_SNS_TOPIC, JSON.stringify(replayInfo.reviewMessage));
+		const query = `
+			UPDATE replay_summary
+			SET bgsPerfectGame = 1
+			WHERE reviewId = ${SqlString.escape(replayInfo.reviewMessage.reviewId)}
+		`;
+		logger.debug('running query', query);
+		const result = await mysql.query(query);
+		logger.debug('result', result);
+	}
 	await mysql.end();
 };
 
 const buildWarbandStats = async (
+	bgParsedInfo: BgsPostMatchStats,
 	replayInfo: ReplayInfo,
-	allCards: AllCardsService,
 ): Promise<readonly InternalWarbandStats[]> => {
 	try {
-		const replayString = replayInfo.replayString;
-		const stats = parseBattlegroundsGame(replayString, null, null, null, allCards);
-		replayInfo.bgsPostMatchStats = stats;
-		const result = stats.totalStatsOverTurn.map(stat => ({
+		replayInfo.bgsPostMatchStats = bgParsedInfo;
+		const result = bgParsedInfo.totalStatsOverTurn.map((stat) => ({
 			turn: stat.turn,
 			totalStats: stat.value,
 		}));
@@ -125,6 +138,14 @@ const retrieveCombatWinrate = async (
 	message: ReviewMessage,
 	mysql: ServerlessMysql,
 ): Promise<readonly InternalCombatWinrate[]> => {
+	if (message.bgBattleOdds?.length) {
+		return message.bgBattleOdds.map((odd) => ({
+			turn: odd.turn,
+			winrate: odd.wonPercent,
+		}));
+	}
+
+	// TODO: deprecate this
 	const query = `
 		SELECT * FROM bgs_single_run_stats
 		WHERE reviewId = '${message.reviewId}'
@@ -137,11 +158,29 @@ const retrieveCombatWinrate = async (
 	}
 	const stats = parseStats(results[0].jsonStats);
 	return stats.battleResultHistory
-		.filter(result => result?.simulationResult?.wonPercent != null)
-		.map(result => ({
+		.filter((result) => result?.simulationResult?.wonPercent != null)
+		.map((result) => ({
 			turn: result.turn,
 			winrate: Math.round(10 * result.simulationResult.wonPercent) / 10,
 		}));
+};
+
+const isBgPerfectGame = (bgParsedInfo: BgsPostMatchStats, replayInfo: ReplayInfo): boolean => {
+	if (!replayInfo.reviewMessage.additionalResult || parseInt(replayInfo.reviewMessage.additionalResult) !== 1) {
+		return false;
+	}
+
+	const mainPlayerCardId = replayInfo.replay?.mainPlayerCardId;
+	const mainPlayerHpOverTurn = bgParsedInfo.hpOverTurn[mainPlayerCardId];
+	// Let's use 8 turns as a minimum to be considered a perfect game
+	if (!mainPlayerHpOverTurn?.length || mainPlayerHpOverTurn.length < 8) {
+		return false;
+	}
+
+	const maxHp = Math.max(...mainPlayerHpOverTurn.map((info) => info.value));
+	const startingHp = maxHp;
+	const endHp = mainPlayerHpOverTurn[mainPlayerHpOverTurn.length - 1].value;
+	return endHp === startingHp;
 };
 
 const parseStats = (inputStats: string): BgsPostMatchStats => {

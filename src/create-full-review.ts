@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { logBeforeTimeout, logger, S3 } from '@firestone-hs/aws-lambda-utils';
+import { logBeforeTimeout, logger, S3, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { saveReplayInReplaySummary } from './010_replay-summary';
@@ -10,7 +10,6 @@ import { buildMercenariesMatchStats } from './040_mercenaries-match-stats';
 import { updateDuelsLeaderboard } from './050_duels-leaderboard';
 import { handleDuelsRunEnd } from './070_duels-run-end';
 import { ReviewMessage } from './review-message';
-import { Sns } from './services/sns';
 
 const s3 = new S3();
 const sns = new Sns();
@@ -22,16 +21,16 @@ const cards = new AllCardsService();
 export default async (event, context): Promise<any> => {
 	const cleanup = logBeforeTimeout(context);
 	logger.debug('received message', event);
-	const messages = event.Records.map(record => record.body).map(msg => JSON.parse(msg));
+	const messages = event.Records.map((record) => record.body).map((msg) => JSON.parse(msg));
 	const s3infos = messages
-		.map(msg => JSON.parse(msg.Message))
-		.map(msg => msg.Records)
+		.map((msg) => JSON.parse(msg.Message))
+		.map((msg) => msg.Records)
 		.reduce((a, b) => a.concat(b), [])
-		.map(record => record.s3);
+		.map((record) => record.s3);
 	logger.debug('wait for cards db init');
 	await cards.initializeCardsDb();
 	logger.debug('card db init done');
-	await Promise.all(s3infos.map(s3 => handleReplay(s3)));
+	await Promise.all(s3infos.map((s3) => handleReplay(s3)));
 	cleanup();
 	return { statusCode: 200, body: '' };
 };
@@ -45,7 +44,7 @@ const handleReplay = async (message): Promise<void> => {
 		logger.debug('after buildMatchStats');
 		if (['battlegrounds', 'battlegrounds-friendly'].includes(replayInfo.reviewMessage.gameMode)) {
 			logger.debug('before buildBgsRunStats');
-			await buildBgsRunStats(replayInfo, cards, s3);
+			await buildBgsRunStats(replayInfo, cards, sns);
 			logger.debug('after buildBgsRunStats');
 			await buildBgsPostMatchStats(replayInfo, cards, s3);
 			logger.debug('after buildBgsPostMatchStats');
@@ -60,7 +59,7 @@ const handleReplay = async (message): Promise<void> => {
 			logger.debug('before updateDuelsLeaderboard');
 			await updateDuelsLeaderboard(replayInfo);
 			logger.debug('after updateDuelsLeaderboard');
-			const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map(info => parseInt(info));
+			const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map((info) => parseInt(info));
 			// Handled as part of the RunEnd process
 			// if (
 			// 	(wins === 11 && replayInfo.reviewMessage.result === 'won') ||

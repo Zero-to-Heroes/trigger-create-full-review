@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection, logger, S3 } from '@firestone-hs/aws-lambda-utils';
+import { getConnection, logger, S3, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsHeroQuest, parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
@@ -9,7 +9,6 @@ import { v4 } from 'uuid';
 import { ReplayInfo } from './create-full-review';
 import { getDefaultHeroDbfIdForClass } from './hs-utils';
 import { ReviewMessage } from './review-message';
-import { Sns } from './services/sns';
 
 export const saveReplayInReplaySummary = async (
 	message,
@@ -121,6 +120,10 @@ export const saveReplayInReplaySummary = async (
 	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
 
 	const quests: readonly BgsHeroQuest[] = gameMode === 'battlegrounds' ? replay.bgsHeroQuests ?? [] : [];
+	const bgBattleOdds: readonly { turn: number; wonPercent: number }[] = !!metadata['bg-battle-odds']?.length
+		? JSON.parse(metadata['bg-battle-odds'])
+		: [];
+
 	const reviewToNotify: ReviewMessage = {
 		reviewId: reviewId,
 		creationDate: creationDate,
@@ -161,10 +164,11 @@ export const saveReplayInReplaySummary = async (
 		region: replay.region,
 		allowGameShare: allowGameShare,
 		bgsHasQuests: replay.hasBgsQuests,
-		bgsHeroQuests: quests.map(q => q.questCardId) as readonly string[],
-		bgsQuestsCompletedTimings: quests.map(q => q.turnCompleted) as readonly number[],
-		bgsQuestsDifficulties: quests.map(q => q.questDifficulty) as readonly number[],
-		bgsHeroQuestRewards: quests.map(q => q.rewardCardId) as readonly string[],
+		bgsHeroQuests: quests.map((q) => q.questCardId) as readonly string[],
+		bgsQuestsCompletedTimings: quests.map((q) => q.turnCompleted) as readonly number[],
+		bgsQuestsDifficulties: quests.map((q) => q.questDifficulty) as readonly number[],
+		bgsHeroQuestRewards: quests.map((q) => q.rewardCardId) as readonly string[],
+		bgBattleOdds: bgBattleOdds,
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
@@ -268,10 +272,10 @@ export const saveReplayInReplaySummary = async (
 				${replay.region},
 				${allowGameShare ? 1 : 0},
 				${reviewToNotify.bgsHasQuests ? 1 : 0},
-				${nullIfEmpty(quests?.map(q => q.questCardId).join(','))},
-				${nullIfEmpty(quests?.map(q => q.turnCompleted).join(','))},
-				${nullIfEmpty(quests?.map(q => q.questDifficulty).join(','))},
-				${nullIfEmpty(quests?.map(q => q.rewardCardId).join(','))}
+				${nullIfEmpty(quests?.map((q) => q.questCardId).join(','))},
+				${nullIfEmpty(quests?.map((q) => q.turnCompleted).join(','))},
+				${nullIfEmpty(quests?.map((q) => q.questDifficulty).join(','))},
+				${nullIfEmpty(quests?.map((q) => q.rewardCardId).join(','))}
 			)
 		`;
 		logger.debug('running query', query);
@@ -285,7 +289,7 @@ export const saveReplayInReplaySummary = async (
 		// duels-leaderboard
 		// sns.notifyDuelsReviewPublished(reviewToNotify);
 
-		const [wins, losses] = additionalResult.split('-').map(info => parseInt(info));
+		const [wins, losses] = additionalResult.split('-').map((info) => parseInt(info));
 		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
 			// trigger-build-duels-12-wins
 			// sns.notifyDuels12winsReviewPublished(reviewToNotify);
@@ -296,7 +300,7 @@ export const saveReplayInReplaySummary = async (
 			// sns.notifyDuelsRunEndPublished(reviewToNotify);
 		}
 	} else if (['ranked'].includes(gameMode)) {
-		sns.notifyReviewPublished(reviewToNotify);
+		sns.notify(process.env.REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
 	} else if (['battlegrounds', 'battlegrounds-friendly'].includes(gameMode)) {
@@ -331,7 +335,7 @@ const extractTribes = (tribes: string): readonly Race[] => {
 	}
 	try {
 		const parsed: readonly string[] = JSON.parse(tribes);
-		return parsed.map(tribe => parseInt(tribe));
+		return parsed.map((tribe) => parseInt(tribe));
 	} catch (e) {
 		logger.error('could not parse tribes', tribes, e);
 		return null;
@@ -347,10 +351,7 @@ const getMetadataBool = (metadata: any, key: string): boolean => {
 };
 
 const toCreationDate = (today: Date): string => {
-	return `${today
-		.toISOString()
-		.slice(0, 19)
-		.replace('T', ' ')}.${today.getMilliseconds()}`;
+	return `${today.toISOString().slice(0, 19).replace('T', ' ')}.${today.getMilliseconds()}`;
 };
 
 export const nullIfEmpty = (value: string): string => {

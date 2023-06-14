@@ -15,6 +15,7 @@ Globals:
                 DUELS_HIGH_WINS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsHighWinsReviewPublishedSnsTopic
                 DUELS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsReviewPublishedSnsTopic
                 DUELS_RUN_END_PUBLISHED_SNS_TOPIC: !Ref DuelsRunEndPublishedSnsTopic
+                BG_PERFECT_GAME_SNS_TOPIC: !Ref BgPerfectGameSnsTopic
 
 Resources:
     ReviewPublishedSnsTopic:
@@ -52,6 +53,11 @@ Resources:
         Properties:
             TopicName: 'duels-review-published'
             DisplayName: 'duels-review-published'
+    BgPerfectGameSnsTopic:
+        Type: AWS::SNS::Topic
+        Properties:
+            TopicName: 'bg-perfect-game'
+            DisplayName: 'bg-perfect-game'
 
     PopulateGameSummaryFunction:
         Type: AWS::Serverless::Function
@@ -60,7 +66,7 @@ Resources:
             Runtime: nodejs16.x
             Timeout: 120
             CodeUri: ./dist/create-full-review
-            MemorySize: 900 # Increase memory to be able to handle big games like BGS
+            MemorySize: 1200 # Increase memory to be able to handle big games like BGS
             ReservedConcurrentExecutions: 50
             Tags:
                 LambdaName: trigger-create-full-review
