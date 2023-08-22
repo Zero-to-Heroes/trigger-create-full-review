@@ -120,6 +120,7 @@ export const saveReplayInReplaySummary = async (
 	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
 
 	const quests: readonly BgsHeroQuest[] = gameMode === 'battlegrounds' ? replay.bgsHeroQuests ?? [] : [];
+	const bgsAnomalies: readonly string[] = gameMode === 'battlegrounds' ? replay.bgsAnomalies ?? [] : [];
 	const bgBattleOdds: readonly { turn: number; wonPercent: number }[] = !!metadata['bg-battle-odds']?.length
 		? JSON.parse(metadata['bg-battle-odds'])
 		: [];
@@ -169,6 +170,8 @@ export const saveReplayInReplaySummary = async (
 		bgsQuestsDifficulties: quests.map((q) => q.questDifficulty) as readonly number[],
 		bgsHeroQuestRewards: quests.map((q) => q.rewardCardId) as readonly string[],
 		bgBattleOdds: bgBattleOdds,
+		bgsHasAnomalies: replay.hasBgsAnomalies,
+		bgsAnomalies: bgsAnomalies,
 	};
 
 	const debug = reviewToNotify.appChannel === 'beta';
@@ -235,7 +238,8 @@ export const saveReplayInReplaySummary = async (
 				bgsHeroQuests,
 				bgsQuestsCompletedTimings,
 				bgsQuestsDifficulties,
-				bgsHeroQuestRewards
+				bgsHeroQuestRewards,
+				bgsAnomalies
 			)
 			VALUES
 			(
@@ -275,7 +279,8 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(quests?.map((q) => q.questCardId).join(','))},
 				${nullIfEmpty(quests?.map((q) => q.turnCompleted).join(','))},
 				${nullIfEmpty(quests?.map((q) => q.questDifficulty).join(','))},
-				${nullIfEmpty(quests?.map((q) => q.rewardCardId).join(','))}
+				${nullIfEmpty(quests?.map((q) => q.rewardCardId).join(','))},
+				${nullIfEmpty(bgsAnomalies.join(','))}
 			)
 		`;
 		logger.debug('running query', query);

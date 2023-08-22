@@ -15,7 +15,7 @@ import { DeckStat } from './06_duels-high-wins/deck-stat';
 import { ReplayInfo } from './create-full-review';
 import { formatDate, toCreationDate } from './services/utils';
 
-export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsService): Promise<void> => {
+export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCardsService): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	const runId = message.currentDuelsRunId ?? message.runId;
 	if (!runId) {
@@ -49,9 +49,9 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 	const uniqueHeroes = [
 		...new Set(
 			allDecksResults
-				.map(result => result.playerCardId)
-				.map(hero => normalizeDuelsHeroCardId(hero))
-				.filter(hero => allDuelsHeroes.includes(hero as CardIds)),
+				.map((result) => result.playerCardId)
+				.map((hero) => normalizeDuelsHeroCardId(hero))
+				.filter((hero) => allDuelsHeroes.includes(hero as CardIds)),
 		),
 	];
 	if (uniqueHeroes.length !== 1) {
@@ -59,28 +59,28 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 			'corrupted run',
 			runId,
 			uniqueHeroes,
-			allDecksResults.map(result => result.playerCardId),
+			allDecksResults.map((result) => result.playerCardId),
 			replayInfo.reviewMessage,
 		);
 		await mysql.end();
 		return;
 	}
 
-	const firstGameResult = allDecksResults.filter(result => result.additionalResult === '0-0');
+	const firstGameResult = allDecksResults.filter((result) => result.additionalResult === '0-0');
 	if (!lootResults || lootResults.length === 0 || !firstGameResult || firstGameResult.length === 0) {
 		logger.error(
 			'missing game/loot info for run end',
 			runId,
 			lootResults,
 			firstGameResult,
-			allDecksResults.map(r => r.additionalResult),
+			allDecksResults.map((r) => r.additionalResult),
 			replayInfo.reviewMessage,
 		);
 		await mysql.end();
 		return;
 	}
 
-	const heroPowerNodes = lootResults.filter(result => result.bundleType === 'hero-power');
+	const heroPowerNodes = lootResults.filter((result) => result.bundleType === 'hero-power');
 	if (heroPowerNodes.length !== 1) {
 		logger.error('corrupted run (hero pwoers)', runId, uniqueHeroes, replayInfo.reviewMessage);
 		await mysql.end();
@@ -89,11 +89,11 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 
 	const heroPowerNode = heroPowerNodes[0];
 	const finalDecklist = message.playerDecklist;
-	const [wins, losses] = message.additionalResult.split('-').map(info => parseInt(info));
+	const [wins, losses] = message.additionalResult.split('-').map((info) => parseInt(info));
 
 	const firstGameInRun = firstGameResult[0];
 	const periodDate = new Date(message.creationDate);
-	const decklist = cleanDecklist(firstGameInRun.playerDecklist, firstGameInRun.playerCardId, cards);
+	const decklist = cleanDecklist(firstGameInRun.playerDecklist, firstGameInRun.playerCardId, allCards);
 	if (!decklist) {
 		logger.error(
 			'invalid decklist',
@@ -105,9 +105,9 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 		return null;
 	}
 
-	const rating = allDecksResults.find(result => result.playerRank != null)?.playerRank;
+	const rating = allDecksResults.find((result) => result.playerRank != null)?.playerRank;
 	logger.debug('rating', rating, allDecksResults);
-	const playerClass = findPlayerClass(firstGameInRun.playerClass, firstGameInRun.playerCardId);
+	const playerClass = findPlayerClass(firstGameInRun.playerClass, firstGameInRun.playerCardId, allCards);
 	const allTreasures = findTreasuresCardIds(lootResults, heroPowerNode.runId);
 	const row: InternalDuelsRow = {
 		gameMode: message.gameMode,
@@ -123,10 +123,10 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 		wins: wins + (message.result === 'won' ? 1 : 0),
 		losses: losses + (message.result === 'lost' ? 1 : 0),
 		treasures: allTreasures
-			.filter(cardId => !cards.getCard(cardId)?.mechanics?.includes('DUNGEON_PASSIVE_BUFF'))
+			.filter((cardId) => !allCards.getCard(cardId)?.mechanics?.includes('DUNGEON_PASSIVE_BUFF'))
 			.join(','),
 		passives: allTreasures
-			.filter(cardId => cards.getCard(cardId)?.mechanics?.includes('DUNGEON_PASSIVE_BUFF'))
+			.filter((cardId) => allCards.getCard(cardId)?.mechanics?.includes('DUNGEON_PASSIVE_BUFF'))
 			.join(','),
 	} as InternalDuelsRow;
 
@@ -227,12 +227,12 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, cards: AllCardsS
 	await mysql.end();
 };
 
-const findPlayerClass = (playerClass: string, heroCardId: string): string => {
+const findPlayerClass = (playerClass: string, heroCardId: string, allCards: AllCardsService): string => {
 	if (playerClass?.length) {
 		return playerClass;
 	}
 	if (heroCardId?.length) {
-		const heroClasses = duelsHeroConfigs.find(c => c.hero === heroCardId)?.heroClasses;
+		const heroClasses = allCards.getCard(duelsHeroConfigs.find((c) => c.hero === heroCardId)?.hero).classes;
 		return heroClasses?.length ? CardClass[heroClasses[0]]?.toLowerCase() : '';
 	}
 	return '';
@@ -240,7 +240,7 @@ const findPlayerClass = (playerClass: string, heroCardId: string): string => {
 
 const cleanDecklist = (initialDecklist: string, playerCardId: string, cards: AllCardsService): string => {
 	const decoded = decode(initialDecklist);
-	const validCards = decoded.cards.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible);
+	const validCards = decoded.cards.filter((dbfCardId) => cards.getCardFromDbfId(dbfCardId[0]).collectible);
 	if (validCards.length !== 15) {
 		logger.error('Invalid deck list', initialDecklist, decoded);
 		return null;
@@ -274,16 +274,16 @@ interface InternalDuelsRow {
 
 const findSignatureTreasureCardId = (decksResults: readonly any[], runId: string): string => {
 	const sigs = decksResults
-		.filter(result => result.runId === runId)
-		.filter(result => result.bundleType === 'signature-treasure');
+		.filter((result) => result.runId === runId)
+		.filter((result) => result.bundleType === 'signature-treasure');
 	return sigs.length === 0 ? null : sigs[0].pickedTreasure;
 };
 
 const findTreasuresCardIds = (decksResults: readonly any[], runId: string): readonly string[] => {
 	return decksResults
-		.filter(result => result.runId === runId)
-		.filter(result => result.bundleType === 'treasure')
-		.map(result => result.pickedTreasure);
+		.filter((result) => result.runId === runId)
+		.filter((result) => result.bundleType === 'treasure')
+		.map((result) => result.pickedTreasure);
 };
 
 const getHero = (playerCardId: string, cards: AllCardsService): number => {

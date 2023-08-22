@@ -58,6 +58,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		bgsQuestsCompletedTimings: message.bgsQuestsCompletedTimings,
 		bgsQuestsDifficulties: message.bgsQuestsDifficulties,
 		bgsHeroQuestRewards: message.bgsHeroQuestRewards,
+		bgsAnomalies: message.bgsAnomalies,
 	} as InternalBgsRow;
 
 	const insertQuery = `
@@ -77,7 +78,8 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			bgsHeroQuests,
 			bgsQuestsCompletedTimings,
 			bgsQuestsDifficulties,
-			bgsHeroQuestRewards
+			bgsHeroQuestRewards,
+			bgsAnomalies
 		)
 		VALUES 
 		(
@@ -95,7 +97,8 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			${nullIfEmpty(row.bgsHeroQuests?.join(','))},
 			${nullIfEmpty(row.bgsQuestsCompletedTimings?.join(','))},
 			${nullIfEmpty(row.bgsQuestsDifficulties?.join(','))},
-			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))}
+			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))},
+			${nullIfEmpty(row.bgsAnomalies?.join(','))}
 		)
 	`;
 	logger.debug('running query', insertQuery);
@@ -243,6 +246,7 @@ interface InternalBgsRow {
 	readonly bgsQuestsCompletedTimings: readonly number[];
 	readonly bgsQuestsDifficulties: readonly number[];
 	readonly bgsHeroQuestRewards: readonly string[];
+	readonly bgsAnomalies: readonly string[];
 }
 
 interface InternalCombatWinrate {
