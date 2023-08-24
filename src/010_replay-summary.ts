@@ -29,6 +29,7 @@ export const saveReplayInReplaySummary = async (
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
 	logger.debug('will get replay string', metadata);
+	console.debug('processing', bucketName, key);
 	const replayString = await s3.readZippedContent(bucketName, key);
 	logger.debug('got replayString', bucketName, key);
 	if (!replayString) {
