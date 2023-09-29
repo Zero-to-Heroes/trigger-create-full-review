@@ -106,6 +106,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 
 	const bgPerfectGame = isBgPerfectGame(bgParsedInfo, replayInfo);
 	if (bgPerfectGame) {
+		console.log('sending SNS notification for perfect game', replayInfo.reviewMessage.reviewId);
 		sns.notify(process.env.BG_PERFECT_GAME_SNS_TOPIC, JSON.stringify(replayInfo.reviewMessage));
 		const query = `
 			UPDATE replay_summary
