@@ -80,14 +80,16 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 		return;
 	}
 
-	const heroPowerNodes = lootResults.filter((result) => result.bundleType === 'hero-power');
-	if (heroPowerNodes.length !== 1) {
-		logger.error('corrupted run (hero pwoers)', runId, uniqueHeroes, replayInfo.reviewMessage);
+	const heroPowers = [
+		...new Set(lootResults.filter((result) => result.bundleType === 'hero-power').map((r) => r.pickedTreasure)),
+	];
+	if (heroPowers.length !== 1) {
+		logger.error('corrupted run (hero pwoers)', runId, uniqueHeroes, heroPowers, replayInfo.reviewMessage);
 		await mysql.end();
 		return;
 	}
 
-	const heroPowerNode = heroPowerNodes[0];
+	const heroPower = heroPowers[0];
 	const finalDecklist = message.playerDecklist;
 	const [wins, losses] = message.additionalResult.split('-').map((info) => parseInt(info));
 
@@ -108,7 +110,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 	const rating = allDecksResults.find((result) => result.playerRank != null)?.playerRank;
 	logger.debug('rating', rating, allDecksResults);
 	const playerClass = findPlayerClass(firstGameInRun.playerClass, firstGameInRun.playerCardId, allCards);
-	const allTreasures = findTreasuresCardIds(lootResults, heroPowerNode.runId);
+	const allTreasures = findTreasuresCardIds(lootResults, firstGameInRun.runId);
 	const row: InternalDuelsRow = {
 		gameMode: message.gameMode,
 		runStartDate: new Date(firstGameInRun.creationDate),
@@ -118,8 +120,8 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 		runId: runId,
 		playerClass: playerClass,
 		hero: message.playerCardId,
-		heroPower: heroPowerNode.pickedTreasure,
-		signatureTreasure: findSignatureTreasureCardId(lootResults, heroPowerNode.runId),
+		heroPower: heroPower,
+		signatureTreasure: findSignatureTreasureCardId(lootResults, firstGameInRun.runId),
 		wins: wins + (message.result === 'won' ? 1 : 0),
 		losses: losses + (message.result === 'lost' ? 1 : 0),
 		treasures: allTreasures
@@ -190,9 +192,9 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 			finalDecklist: finalDecklist,
 			decklist: decklist,
 			heroCardId: message.playerCardId,
-			heroPowerCardId: heroPowerNode.pickedTreasure,
-			signatureTreasureCardId: findSignatureTreasureCardId(lootResults, heroPowerNode.runId),
-			treasuresCardIds: findTreasuresCardIds(lootResults, heroPowerNode.runId),
+			heroPowerCardId: heroPower,
+			signatureTreasureCardId: findSignatureTreasureCardId(lootResults, firstGameInRun.runId),
+			treasuresCardIds: findTreasuresCardIds(lootResults, firstGameInRun.runId),
 			runId: runId,
 			wins: wins + (message.result === 'won' ? 1 : 0),
 			losses: losses + (message.result === 'lost' ? 1 : 0),
