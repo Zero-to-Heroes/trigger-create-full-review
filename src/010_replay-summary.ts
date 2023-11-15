@@ -29,7 +29,6 @@ export const saveReplayInReplaySummary = async (
 	const userId = metadata['user-key'];
 	const userName = metadata['username'];
 	logger.debug('will get replay string', metadata);
-	console.debug('processing', bucketName, key);
 	const replayString = await s3.readZippedContent(bucketName, key);
 	logger.debug('got replayString', bucketName, key);
 	if (!replayString) {
@@ -56,6 +55,7 @@ export const saveReplayInReplaySummary = async (
 	const allowGameShare = getMetadataBool(metadata, 'allow-game-share');
 
 	const reviewId = metadata['review-id'];
+	console.debug('processing', reviewId);
 	const mysql = await getConnection();
 	const existingReviewResult: any[] = await mysql.query(
 		`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`,
@@ -92,9 +92,11 @@ export const saveReplayInReplaySummary = async (
 
 	let playerClass = cards.getCard(replay.mainPlayerCardId)?.playerClass?.toLowerCase();
 	let playerCardId = replay.mainPlayerCardId;
-	if (gameMode === 'ranked') {
+	if (!!deckstring?.length) {
 		try {
-			// Because we might be playing a Maestra deck and ended the game before revealing ourselves
+			// Because we might be playing a Maestra deck and ended the game before revealing ourselves,
+			// or because in some tavern brawls (like the chess one) the hero we play with does not
+			// reflect the class of the deck we built
 			const deckDefinition = deckstring?.length ? decode(deckstring) : null;
 			const playerClassFromDeckstring = cards
 				.getCardFromDbfId(deckDefinition?.heroes[0])
