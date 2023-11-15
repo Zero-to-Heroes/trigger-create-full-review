@@ -174,8 +174,8 @@ const isBgPerfectGame = (bgParsedInfo: BgsPostMatchStats, replayInfo: ReplayInfo
 		return false;
 	}
 
-	const mainPlayerCardId = replayInfo.replay?.mainPlayerCardId;
-	const mainPlayerHpOverTurn = bgParsedInfo.hpOverTurn[mainPlayerCardId];
+	const mainPlayerId = replayInfo.replay?.mainPlayerId;
+	const mainPlayerHpOverTurn = bgParsedInfo.hpOverTurn[mainPlayerId];
 	// Let's use 8 turns as a minimum to be considered a perfect game
 	if (!mainPlayerHpOverTurn?.length || mainPlayerHpOverTurn.length < 8) {
 		return false;
