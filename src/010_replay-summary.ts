@@ -294,21 +294,23 @@ export const saveReplayInReplaySummary = async (
 	logger.debug('closed connection');
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
-		// duels-leaderboard
-		// sns.notifyDuelsReviewPublished(reviewToNotify);
-
-		const [wins, losses] = additionalResult.split('-').map((info) => parseInt(info));
-		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
-			// trigger-build-duels-12-wins
-			// sns.notifyDuels12winsReviewPublished(reviewToNotify);
-		}
-
-		if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost')) {
-			// trigger-build-duels-run-stats
-			// sns.notifyDuelsRunEndPublished(reviewToNotify);
-		}
+		// // duels-leaderboard
+		// // sns.notifyDuelsReviewPublished(reviewToNotify);
+		// const [wins, losses] = additionalResult.split('-').map((info) => parseInt(info));
+		// if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost' && wins >= 10)) {
+		// 	// trigger-build-duels-12-wins
+		// 	// sns.notifyDuels12winsReviewPublished(reviewToNotify);
+		// }
+		// if ((wins === 11 && result === 'won') || (losses === 2 && result === 'lost')) {
+		// 	// trigger-build-duels-run-stats
+		// 	// sns.notifyDuelsRunEndPublished(reviewToNotify);
+		// }
 	} else if (['ranked'].includes(gameMode)) {
 		sns.notify(process.env.REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
+		// For deck categorization only
+		// sns.notifyRankedReviewPublished(reviewToNotify);
+	} else if (['arena'].includes(gameMode)) {
+		sns.notify(process.env.ARENA_REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
 	} else if (['battlegrounds', 'battlegrounds-friendly'].includes(gameMode)) {

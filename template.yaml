@@ -12,6 +12,7 @@ Globals:
                 RANKED_REVIEW_PUBLISHED_SNS_TOPIC: !Ref RankedReviewPublishedSnsTopic
                 BATTLEGROUNDS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref BattlegroundsReviewPublishedSnsTopic
                 MERCENARIES_REVIEW_PUBLISHED_SNS_TOPIC: !Ref MercenariesReviewPublishedSnsTopic
+                ARENA_REVIEW_PUBLISHED_SNS_TOPIC: !Ref ArenaReviewPublishedSnsTopic
                 DUELS_HIGH_WINS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsHighWinsReviewPublishedSnsTopic
                 DUELS_REVIEW_PUBLISHED_SNS_TOPIC: !Ref DuelsReviewPublishedSnsTopic
                 DUELS_RUN_END_PUBLISHED_SNS_TOPIC: !Ref DuelsRunEndPublishedSnsTopic
@@ -38,6 +39,11 @@ Resources:
         Properties:
             TopicName: 'mercenaries-review-published'
             DisplayName: 'mercenaries-review-published'
+    ArenaReviewPublishedSnsTopic:
+        Type: AWS::SNS::Topic
+        Properties:
+            TopicName: 'arena-review-published'
+            DisplayName: 'arena-review-published'
     DuelsHighWinsReviewPublishedSnsTopic:
         Type: AWS::SNS::Topic
         Properties:
