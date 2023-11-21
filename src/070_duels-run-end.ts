@@ -235,7 +235,20 @@ const findPlayerClass = (playerClass: string, heroCardId: string, allCards: AllC
 	}
 	if (heroCardId?.length) {
 		const heroClasses = allCards.getCard(duelsHeroConfigs.find((c) => c.hero === heroCardId)?.hero).classes;
-		return heroClasses?.length ? CardClass[heroClasses[0]]?.toLowerCase() : '';
+		try {
+			return heroClasses?.length ? heroClasses[0]?.toLowerCase() : '';
+		} catch (e) {
+			console.error(
+				'Could not find class for hero',
+				playerClass,
+				heroCardId,
+				heroClasses,
+				duelsHeroConfigs.find((c) => c.hero === heroCardId),
+				CardClass[heroClasses[0]],
+				e,
+			);
+			throw e;
+		}
 	}
 	return '';
 };
