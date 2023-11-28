@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { getConnection, logger, S3, Sns } from '@firestone-hs/aws-lambda-utils';
+import { decode } from '@firestone-hs/deckstrings';
 import { BgsHeroQuest, parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
-import { decode } from 'deckstrings';
 import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
 import { ReplayInfo } from './create-full-review';

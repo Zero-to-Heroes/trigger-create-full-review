@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
+import { DeckDefinition, decode, encode } from '@firestone-hs/deckstrings';
 import {
 	AllCardsService,
 	CardClass,
@@ -9,7 +10,6 @@ import {
 	duelsHeroConfigs,
 	normalizeDuelsHeroCardId,
 } from '@firestone-hs/reference-data';
-import { DeckDefinition, decode, encode } from 'deckstrings';
 import SqlString from 'sqlstring';
 import { DeckStat } from './06_duels-high-wins/deck-stat';
 import { ReplayInfo } from './create-full-review';
@@ -262,6 +262,7 @@ const cleanDecklist = (initialDecklist: string, playerCardId: string, cards: All
 	}
 	const hero = getHero(playerCardId, cards);
 	const newDeck: DeckDefinition = {
+		...decoded,
 		cards: validCards,
 		heroes: !hero ? decoded.heroes : [hero],
 		format: GameFormat.FT_WILD,
