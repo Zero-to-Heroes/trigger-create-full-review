@@ -117,6 +117,7 @@ export const saveReplayInReplaySummary = async (
 	logger.debug('checkpoint 1');
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
+	const bgsHasSpells = metadata['bgs-has-spells'] === 'true';
 	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
 	const bannedTribes = extractTribes(metadata['banned-races']);
 	const availableTribes = extractTribes(metadata['available-races']);
@@ -162,6 +163,7 @@ export const saveReplayInReplaySummary = async (
 		appChannel: undefinedAsNull(metadata['app-channel']),
 		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
 		bgsHasPrizes: bgsHasPrizes,
+		bgsHasSpells: bgsHasSpells,
 		mercBountyId: undefinedAsNull(metadata['mercs-bounty-id'])
 			? +undefinedAsNull(metadata['mercs-bounty-id'])
 			: null,

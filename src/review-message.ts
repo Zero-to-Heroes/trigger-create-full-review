@@ -34,6 +34,7 @@ export interface ReviewMessage {
 	readonly appChannel: string;
 	readonly normalizedXpGained: number;
 	readonly bgsHasPrizes: boolean;
+	readonly bgsHasSpells: boolean;
 	readonly mercBountyId: number;
 	readonly region: BnetRegion;
 	readonly allowGameShare: boolean;
