@@ -36,6 +36,7 @@ export default async (event, context): Promise<any> => {
 };
 
 const handleReplay = async (message): Promise<void> => {
+	const start = Date.now();
 	logger.debug('start processing', message);
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
@@ -76,6 +77,9 @@ const handleReplay = async (message): Promise<void> => {
 				logger.debug('after handleDuelsRunEnd');
 			}
 		}
+	}
+	if (replayInfo.userName === 'daedin' || Date.now() - start > 10000) {
+		logger.dumpBuffer();
 	}
 };
 
