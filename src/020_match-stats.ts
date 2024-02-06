@@ -12,47 +12,54 @@ import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
 
 export const buildMatchStats = async (replayInfo: ReplayInfo) => {
+	// New mode, everything is inserted in one go
+	if (replayInfo.fullMetaData) {
+		return;
+	}
+
 	const message = replayInfo.reviewMessage;
 	const reviewId = message.reviewId;
 	const replay: Replay = replayInfo.replay;
 	const statsFromGame: readonly Stat[] = await extractStats(message, replay, replayInfo.replayString);
 
 	// Common
-	const xpGained = intValue(statsFromGame.find(stat => stat.statName === 'normalized-xp-gained')?.statValue);
+	const xpGained = intValue(statsFromGame.find((stat) => stat.statName === 'normalized-xp-gained')?.statValue);
 	const totalDurationSeconds = intValue(
-		statsFromGame.find(stat => stat.statName === 'total-duration-seconds')?.statValue,
+		statsFromGame.find((stat) => stat.statName === 'total-duration-seconds')?.statValue,
 	);
 	const totalDurationTurns = intValue(
-		statsFromGame.find(stat => stat.statName === 'total-duration-turns')?.statValue,
+		statsFromGame.find((stat) => stat.statName === 'total-duration-turns')?.statValue,
 	);
 
 	// Duels
-	const duelsRunId = statsFromGame.find(stat => stat.statName === 'duels-run-id')?.statValue;
+	const duelsRunId = statsFromGame.find((stat) => stat.statName === 'duels-run-id')?.statValue;
 
 	// BG
 	const bgsBannedTribes = statsFromGame
-		.filter(stat => stat.statName === 'bgs-banned-tribes')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'bgs-banned-tribes')
+		.map((stat) => stat.statValue)
 		.join(',');
 	const bgsAvailableTribes = statsFromGame
-		.filter(stat => stat.statName === 'bgs-available-tribes')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'bgs-available-tribes')
+		.map((stat) => stat.statValue)
 		.join(',');
 	const bgsHeroPickOptions = statsFromGame
-		.filter(stat => stat.statName === 'bgs-hero-pick-option')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'bgs-hero-pick-option')
+		.map((stat) => stat.statValue)
 		.join(',');
-	const bgsHeroPickChoice = statsFromGame.find(stat => stat.statName === 'bgs-hero-pick-choice')?.statValue;
+	const bgsHeroPickChoice = statsFromGame.find((stat) => stat.statName === 'bgs-hero-pick-choice')?.statValue;
 
 	// Mercenaries are handled into their own lambda, so they can update replay_summary
 	// and the mercenaries table at the same time
 
-	const validStats = statsFromGame.filter(stat => stat);
+	const validStats = statsFromGame.filter((stat) => stat);
 	// logger.debug('validStats', validStats);
 	const mysql = await getConnection();
 	if (validStats.length > 0) {
 		const escape = SqlString.escape;
 
+		// bgsHeroPickChoice not used
+		// bgsHeroPickOption not used
 		// And now insert it in the new table
 		const additionalQuery2 = `
 			UPDATE replay_summary
@@ -90,9 +97,9 @@ export const extractStats = async (
 		duelsRunIdExtractor,
 		normalizedXpGainedExtractor,
 	];
-	const stats = (await Promise.all(extractors.map(extractor => extractor(message, replay, replayString))))
+	const stats = (await Promise.all(extractors.map((extractor) => extractor(message, replay, replayString))))
 		.reduce((a, b) => a.concat(b), [])
-		.filter(stat => stat);
+		.filter((stat) => stat);
 	return stats;
 };
 

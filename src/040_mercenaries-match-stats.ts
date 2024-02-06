@@ -12,6 +12,8 @@ import { ReviewMessage } from './review-message';
 let mercenariesReferenceData: MercenariesReferenceData = null;
 
 export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCards: AllCardsService): Promise<void> => {
+	return;
+
 	const message = replayInfo.reviewMessage;
 	if (!isMercenaries(message.gameMode)) {
 		return;
@@ -48,7 +50,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 	}
 
 	const replay: Replay = replayInfo.replay;
-	const numberOfTurns = extractTotalTurns(replay);
+	const numberOfTurns = replayInfo?.fullMetaData?.game.totalDurationTurns ?? extractTotalTurns(replay);
 	if (numberOfTurns <= 3) {
 		logger.debug('game too short, not including it for stats', numberOfTurns);
 		return;
@@ -62,30 +64,30 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		allCards,
 	);
 
-	if (!statsFromGame.filter(stat => stat.statName === 'mercs-hero-timing').length) {
+	if (!statsFromGame.filter((stat) => stat.statName === 'mercs-hero-timing').length) {
 		// logger.debug('no hero timings, returning', statsFromGame);
 		return;
 	}
 
 	const heroTimings = statsFromGame
-		.filter(stat => stat.statName === 'mercs-hero-timing')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'mercs-hero-timing')
+		.map((stat) => stat.statValue)
 		.join(',');
 	const opponentHeroTimings = statsFromGame
-		.filter(stat => stat.statName === 'opponent-mercs-hero-timing')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'opponent-mercs-hero-timing')
+		.map((stat) => stat.statValue)
 		.join(',');
 	const heroEquipments = statsFromGame
-		.filter(stat => stat.statName === 'mercs-hero-equipment')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'mercs-hero-equipment')
+		.map((stat) => stat.statValue)
 		.join(',');
 	const heroLevels = statsFromGame
-		.filter(stat => stat.statName === 'mercs-hero-level')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'mercs-hero-level')
+		.map((stat) => stat.statValue)
 		.join(',');
 	const heroSkillsUsed = statsFromGame
-		.filter(stat => stat.statName === 'mercs-hero-skill-used')
-		.map(stat => stat.statValue)
+		.filter((stat) => stat.statName === 'mercs-hero-skill-used')
+		.map((stat) => stat.statValue)
 		.join(',');
 
 	const escape = SqlString.escape;
@@ -124,25 +126,25 @@ export const buildInsertQuery = (
 
 	// And now populate the second table
 	const uniqueHeroIds = statsFromGame
-		.filter(stat => stat.statName === 'mercs-hero-timing')
-		.map(stat => stat.statValue)
-		.filter(value => value)
-		.map(value => value.split('|')[0]);
+		.filter((stat) => stat.statName === 'mercs-hero-timing')
+		.map((stat) => stat.statValue)
+		.filter((value) => value)
+		.map((value) => value.split('|')[0]);
 	if (!uniqueHeroIds?.length) {
 		return null;
 	}
 	const values = uniqueHeroIds
-		.map(heroCardId => {
+		.map((heroCardId) => {
 			const rawTiming = statsFromGame
-				.filter(stat => stat.statName === 'mercs-hero-timing')
-				.map(stat => stat.statValue)
-				.find(value => value.startsWith(heroCardId));
+				.filter((stat) => stat.statName === 'mercs-hero-timing')
+				.map((stat) => stat.statValue)
+				.find((value) => value.startsWith(heroCardId));
 			const heroTiming = rawTiming ? parseInt(rawTiming.split('|')[1]) : null;
 			// Find the only equipment that could fit the hero
 			const allEquipmentCardIds = statsFromGame
-				.filter(stat => stat.statName === 'mercs-hero-equipment')
-				.map(stat => stat.statValue?.split('|')[1])
-				.filter(value => !!value);
+				.filter((stat) => stat.statName === 'mercs-hero-equipment')
+				.map((stat) => stat.statValue?.split('|')[1])
+				.filter((value) => !!value);
 			// logger.debug(
 			// 	'allEquipmentCardIds',
 			// 	allEquipmentCardIds,
@@ -161,16 +163,16 @@ export const buildInsertQuery = (
 			// 	statsFromGame.filter(stat => stat.statName === 'mercs-hero-skill-used'),
 			// );
 			const spellsForHero = getSpellsForHero(
-				statsFromGame.filter(stat => stat.statName === 'mercs-hero-skill-used'),
+				statsFromGame.filter((stat) => stat.statName === 'mercs-hero-skill-used'),
 				heroCardId,
 				allCards,
 				mercenariesReferenceData,
 			);
 			// logger.debug('spellsForHero', spellsForHero);
 			const rawLevel = statsFromGame
-				.filter(stat => stat.statName === 'mercs-hero-level')
-				.map(stat => stat.statValue)
-				.find(level => level.startsWith(heroCardId));
+				.filter((stat) => stat.statName === 'mercs-hero-level')
+				.map((stat) => stat.statValue)
+				.find((level) => level.startsWith(heroCardId));
 			const heroLevel = rawLevel ? parseInt(rawLevel.split('|')[1]) : null;
 			return `(
 				${escape(message.creationDate)},
@@ -242,18 +244,18 @@ const findEquipmentForHero = (
 	mercenariesReferenceData: MercenariesReferenceData,
 ): string => {
 	const refMerc = mercenariesReferenceData.mercenaries.find(
-		merc => normalizeMercCardId(allCards.getCardFromDbfId(merc.cardDbfId).id) === normalizeMercCardId(heroCardId),
+		(merc) => normalizeMercCardId(allCards.getCardFromDbfId(merc.cardDbfId).id) === normalizeMercCardId(heroCardId),
 	);
 	// Can happen when facing summoned minions
 	if (!refMerc) {
 		return null;
 	}
 	// logger.debug('refMerc', refMerc, heroCardId);
-	const refMercEquipmentTiers = refMerc?.equipments.map(eq => eq.tiers).reduce((a, b) => a.concat(b), []);
+	const refMercEquipmentTiers = refMerc?.equipments.map((eq) => eq.tiers).reduce((a, b) => a.concat(b), []);
 	// logger.debug('refMercEquipmentTiers', refMercEquipmentTiers);
 	const heroEquipmentCardIds =
-		refMercEquipmentTiers.map(eq => eq.cardDbfId).map(eqDbfId => allCards.getCardFromDbfId(eqDbfId).id) ?? [];
-	const candidates: readonly string[] = heroEquipmentCardIds.filter(e => allEquipmentCardIds.includes(e));
+		refMercEquipmentTiers.map((eq) => eq.cardDbfId).map((eqDbfId) => allCards.getCardFromDbfId(eqDbfId).id) ?? [];
+	const candidates: readonly string[] = heroEquipmentCardIds.filter((e) => allEquipmentCardIds.includes(e));
 	// logger.debug('candidates', heroCardId, candidates);
 	if (candidates.length === 0) {
 		return null;
@@ -275,22 +277,24 @@ const getSpellsForHero = (
 	const heroAbilityCardIds =
 		mercenariesReferenceData.mercenaries
 			.find(
-				merc =>
+				(merc) =>
 					normalizeMercCardId(allCards.getCardFromDbfId(merc.cardDbfId).id) ===
 					normalizeMercCardId(heroCardId),
 			)
-			?.abilities.map(ability => ability.tiers)
+			?.abilities.map((ability) => ability.tiers)
 			.reduce((a, b) => a.concat(b), [])
-			.map(ability => ability.cardDbfId)
-			.map(abilityDbfId => allCards.getCardFromDbfId(abilityDbfId).id) ?? [];
+			.map((ability) => ability.cardDbfId)
+			.map((abilityDbfId) => allCards.getCardFromDbfId(abilityDbfId).id) ?? [];
 	// logger.debug('heroAbilityCardIds', heroAbilityCardIds);
-	const allSpellCardIds = stats.map(stat => stat.statValue.split('|')[0]);
+	const allSpellCardIds = stats.map((stat) => stat.statValue.split('|')[0]);
 	// logger.debug('allSpellCardIds', allSpellCardIds);
-	const heroSpellCardIds = allSpellCardIds.filter(s => heroAbilityCardIds.includes(s));
+	const heroSpellCardIds = allSpellCardIds.filter((s) => heroAbilityCardIds.includes(s));
 	// logger.debug('heroSpellCardIds', heroSpellCardIds);
-	return heroSpellCardIds.sort().map(spellCardId => ({
+	return heroSpellCardIds.sort().map((spellCardId) => ({
 		spellCardId: normalizeMercCardId(spellCardId),
-		numberOfTimesUsed: parseInt(stats.find(stat => stat.statValue.startsWith(spellCardId)).statValue.split('|')[1]),
+		numberOfTimesUsed: parseInt(
+			stats.find((stat) => stat.statValue.startsWith(spellCardId)).statValue.split('|')[1],
+		),
 		level: getCardLevel(spellCardId),
 	}));
 };

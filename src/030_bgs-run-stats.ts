@@ -19,24 +19,19 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		logger.debug('no end position', message);
 		return;
 	}
-	// if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
-	// 	logger.debug('no player rank', message);
-	// 	return;
-	// }
-	// if (!message.availableTribes?.length) {
-	// 	logger.debug('no available tribes', message);
-	// 	return;
-	// }
 
 	// Handling skins
 	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
 
 	const replayString = replayInfo.replayString;
-	const bgParsedInfo = parseBattlegroundsGame(replayString, null, null, null, allCards);
-	const warbandStats = await buildWarbandStats(bgParsedInfo, replayInfo);
+	const bgParsedInfo = replayInfo?.fullMetaData?.bgs?.warbandStats
+		? null
+		: parseBattlegroundsGame(replayString, null, null, null, allCards);
+	const warbandStats =
+		replayInfo?.fullMetaData?.bgs?.warbandStats ?? (await buildWarbandStats(bgParsedInfo, replayInfo));
 	// Because there is a race, the combat winrate might have been populated first
 	const mysql = await getConnection();
-	const combatWinrate = await retrieveCombatWinrate(message, mysql);
+	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds ?? (await retrieveCombatWinrate(message, mysql));
 	logger.debug('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
 	const row: InternalBgsRow = {
@@ -104,18 +99,20 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	logger.debug('running query', insertQuery);
 	await mysql.query(insertQuery);
 
-	const bgPerfectGame = isBgPerfectGame(bgParsedInfo, replayInfo);
+	const bgPerfectGame = replayInfo?.fullMetaData?.bgs?.isPerfectGame ?? isBgPerfectGame(bgParsedInfo, replayInfo);
 	if (bgPerfectGame) {
 		console.log('sending SNS notification for perfect game', replayInfo.reviewMessage.reviewId);
 		sns.notify(process.env.BG_PERFECT_GAME_SNS_TOPIC, JSON.stringify(replayInfo.reviewMessage));
-		const query = `
-			UPDATE replay_summary
-			SET bgsPerfectGame = 1
-			WHERE reviewId = ${SqlString.escape(replayInfo.reviewMessage.reviewId)}
-		`;
-		logger.debug('running query', query);
-		const result = await mysql.query(query);
-		logger.debug('result', result);
+		if (!replayInfo.fullMetaData?.bgs) {
+			const query = `
+				UPDATE replay_summary
+				SET bgsPerfectGame = 1
+				WHERE reviewId = ${SqlString.escape(replayInfo.reviewMessage.reviewId)}
+			`;
+			logger.debug('running query', query);
+			const result = await mysql.query(query);
+			logger.debug('result', result);
+		}
 	}
 	await mysql.end();
 };
@@ -174,7 +171,7 @@ const isBgPerfectGame = (bgParsedInfo: BgsPostMatchStats, replayInfo: ReplayInfo
 		return false;
 	}
 
-	const mainPlayerId = replayInfo.replay?.mainPlayerId;
+	const mainPlayerId = replayInfo?.fullMetaData?.bgs?.mainPlayerId ?? replayInfo.replay?.mainPlayerId;
 	const mainPlayerHpOverTurn = bgParsedInfo.hpOverTurn[mainPlayerId];
 	// Let's use 8 turns as a minimum to be considered a perfect game
 	if (!mainPlayerHpOverTurn?.length || mainPlayerHpOverTurn.length < 8) {

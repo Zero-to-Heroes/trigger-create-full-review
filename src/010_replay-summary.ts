@@ -4,10 +4,12 @@ import { decode } from '@firestone-hs/deckstrings';
 import { BgsHeroQuest, parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
 import { Metadata } from 'aws-sdk/clients/s3';
+import { deflate } from 'pako';
 import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
 import { ReplayInfo } from './create-full-review';
 import { getDefaultHeroDbfIdForClass } from './hs-utils';
+import { ReplayUploadMetadata } from './public-api';
 import { ReviewMessage } from './review-message';
 
 export const saveReplayInReplaySummary = async (
@@ -18,23 +20,40 @@ export const saveReplayInReplaySummary = async (
 ): Promise<ReplayInfo> => {
 	const bucketName = message.bucket.name;
 	const key: string = message.object.key;
-	logger.debug('will get metadata');
-	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
-	logger.debug('got metadata', metadata);
-	if (!metadata) {
-		logger.error('No metadata for review', bucketName, key);
-		return null;
-	}
 
-	const userId = metadata['user-key'];
-	const userName = metadata['username'];
-	logger.debug('will get replay string', metadata);
-	const replayString = await s3.readZippedContent(bucketName, key);
-	logger.debug('got replayString', bucketName, key);
+	let start = Date.now();
+	let replayString = await s3.readZippedContent(bucketName, key);
+	logger.debug('got replayString after', Date.now() - start, 'ms', bucketName, key);
 	if (!replayString) {
 		logger.error('Could not read file, not processing review', bucketName, key);
 		return null;
 	}
+
+	// New metadata format
+	let fullMetaData: ReplayUploadMetadata | null = null;
+	if (replayString?.startsWith('{')) {
+		const metadataStr = replayString;
+		if (!!metadataStr?.length) {
+			fullMetaData = JSON.parse(metadataStr);
+		}
+		console.debug('fullMetaData', fullMetaData, replayString);
+		replayString = null; //replayString.substring(index + 1);
+	}
+
+	// logger.debug('will get metadata');
+	const metadata: Metadata = await s3.getObjectMetaData(bucketName, key);
+	// logger.debug('got metadata', metadata);
+	if (!fullMetaData && !metadata) {
+		logger.error('No metadata for review', bucketName, key);
+		return null;
+	}
+
+	const userId = fullMetaData?.user.userId ?? metadata['user-key'];
+	const userName = fullMetaData?.user.userName ?? metadata['username'];
+	// logger.debug('will get replay string', metadata);
+
+	const debug = userName === 'daedin';
+	// debug && console.log('debug', replayString?.slice(0, 1000));
 
 	// if (replayString.includes(CardIds.Collectible.Rogue.MaestraOfTheMasquerade)) {
 	// 	logger.error('Maestra games not supported yet', metadata, message, replayString);
@@ -42,27 +61,29 @@ export const saveReplayInReplaySummary = async (
 	// }
 
 	const uploaderToken = 'overwolf-' + userId;
-	const deckstring = undefinedAsNull(metadata['deckstring']);
-	const playerDeckName = undefinedAsNull(metadata['deck-name']);
-	const scenarioId = undefinedAsNull(metadata['scenario-id']);
-	const buildNumber = undefinedAsNull(metadata['build-number']);
-	const playerRank = undefinedAsNull(metadata['player-rank']);
-	const newPlayerRank = undefinedAsNull(metadata['new-player-rank']);
-	const opponentRank = undefinedAsNull(metadata['opponent-rank']);
-	const gameMode = undefinedAsNull(metadata['game-mode']);
-	const gameFormat: GameFormatString = undefinedAsNull(metadata['game-format']) as GameFormatString;
-	const application = undefinedAsNull(metadata['application-key']);
-	const allowGameShare = getMetadataBool(metadata, 'allow-game-share');
+	const deckstring = fullMetaData?.game.deckstring ?? undefinedAsNull(metadata['deckstring']);
+	const playerDeckName = fullMetaData?.game.deckName ?? undefinedAsNull(metadata['deck-name']);
+	const scenarioId = fullMetaData?.game.scenarioId ?? undefinedAsNull(metadata['scenario-id']);
+	const buildNumber = fullMetaData?.game.buildNumber ?? undefinedAsNull(metadata['build-number']);
+	const playerRank = fullMetaData?.game.playerRank ?? undefinedAsNull(metadata['player-rank']);
+	const newPlayerRank = fullMetaData?.game.newPlayerRank ?? undefinedAsNull(metadata['new-player-rank']);
+	const opponentRank = fullMetaData?.game.opponentRank ?? undefinedAsNull(metadata['opponent-rank']);
+	const gameMode = fullMetaData?.game.gameMode ?? undefinedAsNull(metadata['game-mode']);
+	const gameFormat: GameFormatString =
+		fullMetaData?.game.gameFormat ?? (undefinedAsNull(metadata['game-format']) as GameFormatString);
+	const application = fullMetaData?.meta.application ?? undefinedAsNull(metadata['application-key']);
+	const allowGameShare = fullMetaData?.meta.allowGameShare ?? getMetadataBool(metadata, 'allow-game-share');
 
-	const reviewId = metadata['review-id'];
-	console.debug('processing', reviewId);
+	const reviewId = fullMetaData?.game.reviewId ?? metadata['review-id'];
+	// console.debug('processing', reviewId);
+	start = Date.now();
 	const mysql = await getConnection();
 	const existingReviewResult: any[] = await mysql.query(
 		`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`,
 	);
-	logger.debug('got existingReviewResult');
+	logger.debug('got existingReviewResult after', Date.now() - start, 'ms', reviewId);
 
-	const inputReplayKey = undefinedAsNull(metadata['replay-key']);
+	const inputReplayKey = fullMetaData?.game.replayKey ?? undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
 	const replayKey =
 		inputReplayKey ??
@@ -70,28 +91,42 @@ export const saveReplayInReplaySummary = async (
 	const creationDate = toCreationDate(today);
 
 	let replay: Replay;
-	try {
-		logger.debug('will parse replay string');
-		replay = parseHsReplayString(replayString, cards as any);
-	} catch (e) {
-		logger.error('Could not parse replay', e, message);
-		return null;
+	if (!fullMetaData) {
+		try {
+			logger.debug('will parse replay string');
+			start = Date.now();
+			replay = parseHsReplayString(replayString, cards as any);
+		} catch (e) {
+			logger.error('Could not parse replay', e, message);
+			return null;
+		}
 	}
 
-	logger.debug('got parseHsReplayString');
-	const playerName = replay.mainPlayerName;
+	logger.debug(
+		'got parseHsReplayString after',
+		Date.now() - start,
+		'ms',
+		reviewId,
+		fullMetaData != null,
+		fullMetaData?.game.replayKey,
+	);
+	const playerName = fullMetaData?.game.mainPlayerName ?? replay.mainPlayerName;
 	const opponentName =
-		undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ?? replay.opponentPlayerName;
-	const opponentCardId = replay.opponentPlayerCardId;
-	const result = replay.result;
+		fullMetaData?.game.forceOpponentName ??
+		fullMetaData?.game.opponentPlayerName ??
+		undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ??
+		replay.opponentPlayerName;
+	const opponentCardId = fullMetaData?.game.opponentPlayerCardId ?? replay.opponentPlayerCardId;
+	const result = fullMetaData?.game.result ?? replay.result;
 	const additionalResult =
-		gameMode === 'battlegrounds' || gameMode === 'battlegrounds-friendly'
+		fullMetaData?.game.additionalResult ??
+		(gameMode === 'battlegrounds' || gameMode === 'battlegrounds-friendly'
 			? replay.additionalResult
-			: undefinedAsNull(metadata['additional-result']);
-	const playCoin = replay.playCoin;
+			: undefinedAsNull(metadata['additional-result']));
+	const playCoin = fullMetaData?.game.playCoin ?? replay.playCoin;
 
-	let playerClass = cards.getCard(replay.mainPlayerCardId)?.playerClass?.toLowerCase();
-	let playerCardId = replay.mainPlayerCardId;
+	let playerCardId = fullMetaData?.game.mainPlayerCardId ?? replay.mainPlayerCardId;
+	let playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	if (!!deckstring?.length) {
 		try {
 			// Because we might be playing a Maestra deck and ended the game before revealing ourselves,
@@ -104,9 +139,9 @@ export const saveReplayInReplaySummary = async (
 			playerClass =
 				!!playerClassFromDeckstring && playerClassFromDeckstring !== 'neutral'
 					? playerClassFromDeckstring
-					: cards.getCard(replay.mainPlayerCardId)?.playerClass?.toLowerCase();
+					: cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 
-			if (playerClass !== cards.getCard(replay.mainPlayerCardId)?.playerClass?.toLowerCase()) {
+			if (playerClass !== cards.getCard(playerCardId)?.playerClass?.toLowerCase()) {
 				playerCardId = cards.getCardFromDbfId(getDefaultHeroDbfIdForClass(playerClass)).id;
 			}
 		} catch (e) {
@@ -114,20 +149,23 @@ export const saveReplayInReplaySummary = async (
 		}
 	}
 
-	logger.debug('checkpoint 1');
+	// logger.debug('checkpoint 1');
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
-	const bgsHasPrizes = metadata['bgs-has-prizes'] === 'true';
-	const bgsHasSpells = metadata['bgs-has-spells'] === 'true';
-	const runId = undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
-	const bannedTribes = extractTribes(metadata['banned-races']);
-	const availableTribes = extractTribes(metadata['available-races']);
-	const xpGained = undefinedAsNull(metadata['normalized-xp-gained']);
+	const bgsHasPrizes = fullMetaData?.bgs?.hasPrizes ?? metadata['bgs-has-prizes'] === 'true';
+	const bgsHasSpells = fullMetaData?.bgs?.hasSpells ?? metadata['bgs-has-spells'] === 'true';
+	const runId =
+		fullMetaData?.game.runId ?? undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
+	const bannedTribes = fullMetaData?.bgs?.bannedTribes ?? extractTribes(metadata['banned-races']);
+	const availableTribes = fullMetaData?.bgs?.availableTribes ?? extractTribes(metadata['available-races']);
+	const xpGained = fullMetaData?.meta.normalizedXpGained ?? undefinedAsNull(metadata['normalized-xp-gained']);
 
-	const quests: readonly BgsHeroQuest[] = gameMode === 'battlegrounds' ? replay.bgsHeroQuests ?? [] : [];
-	const bgsAnomalies: readonly string[] = gameMode === 'battlegrounds' ? replay.bgsAnomalies ?? [] : [];
-	const bgBattleOdds: readonly { turn: number; wonPercent: number }[] = !!metadata['bg-battle-odds']?.length
-		? JSON.parse(metadata['bg-battle-odds'])
-		: [];
+	const quests: readonly BgsHeroQuest[] =
+		fullMetaData?.bgs?.heroQuests ?? (gameMode === 'battlegrounds' ? replay?.bgsHeroQuests ?? [] : []);
+	const bgsAnomalies: readonly string[] =
+		fullMetaData?.bgs?.anomalies ?? (gameMode === 'battlegrounds' ? replay?.bgsAnomalies ?? [] : []);
+	const bgBattleOdds: readonly { turn: number; wonPercent: number }[] =
+		fullMetaData?.bgs?.battleOdds ??
+		(!!metadata['bg-battle-odds']?.length ? JSON.parse(metadata['bg-battle-odds']) : []);
 
 	const reviewToNotify: ReviewMessage = {
 		reviewId: reviewId,
@@ -135,7 +173,7 @@ export const saveReplayInReplaySummary = async (
 		gameMode: gameMode,
 		gameFormat: gameFormat,
 		buildNumber: +buildNumber,
-		scenarioId: scenarioId,
+		scenarioId: '' + scenarioId,
 		result: result,
 		additionalResult: additionalResult,
 		coinPlay: playCoin,
@@ -159,33 +197,35 @@ export const saveReplayInReplaySummary = async (
 		bannedTribes: bannedTribes,
 		currentDuelsRunId: runId,
 		runId: runId,
-		appVersion: undefinedAsNull(metadata['app-version']),
-		appChannel: undefinedAsNull(metadata['app-channel']),
-		normalizedXpGained: xpGained == null ? null : parseInt(xpGained),
+		appVersion: fullMetaData?.meta?.appVersion ?? undefinedAsNull(metadata['app-version']),
+		appChannel: fullMetaData?.meta?.appChannel ?? undefinedAsNull(metadata['app-channel']),
+		normalizedXpGained:
+			fullMetaData?.meta.normalizedXpGained ?? (xpGained == null ? null : parseInt('' + xpGained)),
 		bgsHasPrizes: bgsHasPrizes,
 		bgsHasSpells: bgsHasSpells,
-		mercBountyId: undefinedAsNull(metadata['mercs-bounty-id'])
-			? +undefinedAsNull(metadata['mercs-bounty-id'])
-			: null,
-		region: replay.region,
+		mercBountyId:
+			fullMetaData?.mercs?.bountyId ??
+			(undefinedAsNull(metadata['mercs-bounty-id']) ? +undefinedAsNull(metadata['mercs-bounty-id']) : null),
+		region: fullMetaData?.meta?.region ?? replay.region,
 		allowGameShare: allowGameShare,
-		bgsHasQuests: replay.hasBgsQuests,
+		bgsHasQuests: fullMetaData?.bgs?.hasQuests ?? replay?.hasBgsQuests,
 		bgsHeroQuests: quests.map((q) => q.questCardId) as readonly string[],
 		bgsQuestsCompletedTimings: quests.map((q) => q.turnCompleted) as readonly number[],
 		bgsQuestsDifficulties: quests.map((q) => q.questDifficulty) as readonly number[],
 		bgsHeroQuestRewards: quests.map((q) => q.rewardCardId) as readonly string[],
 		bgBattleOdds: bgBattleOdds,
-		bgsHasAnomalies: replay.hasBgsAnomalies,
+		bgsHasAnomalies: fullMetaData?.bgs?.hasAnomalies ?? replay?.hasBgsAnomalies,
 		bgsAnomalies: bgsAnomalies,
 	};
 
-	const debug = reviewToNotify.appChannel === 'beta';
-	logger.debug('built review message');
+	// const debug = reviewToNotify.appChannel === 'beta';
+	// logger.debug('built review message');
 
 	if (existingReviewResult.length > 0) {
 		const returnMessage = {
 			userName: userName,
 			replay: replay,
+			fullMetaData: fullMetaData,
 			reviewMessage: reviewToNotify,
 			replayString: replayString,
 			bgsPostMatchStats: null,
@@ -194,9 +234,12 @@ export const saveReplayInReplaySummary = async (
 		return returnMessage;
 	}
 
-	logger.debug('Writing file', reviewId);
-	await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-	logger.debug('file written');
+	// logger.debug('Writing file', reviewId);
+	if (!!replayString?.length) {
+		start = Date.now();
+		await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
+		logger.debug('file written after', Date.now() - start, 'ms', reviewId);
+	}
 
 	const existQuery = `
 		SELECT * from replay_summary
@@ -240,11 +283,19 @@ export const saveReplayInReplaySummary = async (
 				region,
 				allowGameShare,
 				bgsHasQuests,
+				bgsHasSpells,
 				bgsHeroQuests,
 				bgsQuestsCompletedTimings,
 				bgsQuestsDifficulties,
 				bgsHeroQuestRewards,
-				bgsAnomalies
+				bgsAnomalies,
+				bgsAvailableTribes,
+				bgsBannedTribes,
+				bgsPerfectGame,
+				finalComp,
+				normalizedXpGain,
+				totalDurationSeconds,
+				totalDurationTurns
 			)
 			VALUES
 			(
@@ -252,8 +303,8 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(creationDate)},
 				${nullIfEmpty(gameMode)},
 				${nullIfEmpty(gameFormat)},
-				${nullIfEmpty(buildNumber)},
-				${nullIfEmpty(scenarioId)},
+				${nullIfEmpty('' + buildNumber)},
+				${nullIfEmpty('' + scenarioId)},
 				${nullIfEmpty(result)},
 				${nullIfEmpty(additionalResult)},
 				${nullIfEmpty(playCoin)},
@@ -273,27 +324,35 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(uploaderToken)},
 				${nullIfEmpty(replayKey)},
 				${nullIfEmpty(application)},
-				${nullIfEmpty(metadata['real-xp-gamed'])},
-				${nullIfEmpty(metadata['level-after-match'])},
+				${nullIfEmpty(fullMetaData?.meta.realXpGained ?? metadata['real-xp-gamed'])},
+				${nullIfEmpty(fullMetaData?.meta?.levelAfterMatch ?? metadata['level-after-match'])},
 				${bgsHasPrizes ? 1 : 0},
-				${nullIfEmpty(metadata['mercs-bounty-id'])},
+				${nullIfEmpty(fullMetaData?.mercs?.bountyId ?? metadata['mercs-bounty-id'])},
 				${nullIfEmpty(runId)},
-				${replay.region},
+				${fullMetaData?.meta.region ?? replay.region},
 				${allowGameShare ? 1 : 0},
 				${reviewToNotify.bgsHasQuests ? 1 : 0},
+				${reviewToNotify.bgsHasSpells ? 1 : 0},
 				${nullIfEmpty(quests?.map((q) => q.questCardId).join(','))},
 				${nullIfEmpty(quests?.map((q) => q.turnCompleted).join(','))},
 				${nullIfEmpty(quests?.map((q) => q.questDifficulty).join(','))},
 				${nullIfEmpty(quests?.map((q) => q.rewardCardId).join(','))},
-				${nullIfEmpty(bgsAnomalies.join(','))}
+				${nullIfEmpty(bgsAnomalies.join(','))},
+				${nullIfEmpty(fullMetaData?.bgs?.availableTribes?.join(','))},
+				${nullIfEmpty(fullMetaData?.bgs?.bannedTribes?.join(','))},
+				${fullMetaData?.bgs?.isPerfectGame ? 1 : 0},
+				${nullIfEmpty(fullMetaData?.bgs?.finalComp ? compressStats(fullMetaData.bgs.finalComp) : null)},
+				${nullIfEmpty(fullMetaData?.meta?.normalizedXpGained)},
+				${nullIfEmpty(fullMetaData?.game.totalDurationSeconds)},
+				${nullIfEmpty(fullMetaData?.game.totalDurationTurns)}
 			)
 		`;
-		logger.debug('running query', query);
+		// logger.debug('running query', query);
 		await mysql.query(query);
-		logger.debug('ran query');
+		// logger.debug('ran query');
 	}
 	await mysql.end();
-	logger.debug('closed connection');
+	// logger.debug('closed connection');
 
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		// // duels-leaderboard
@@ -330,11 +389,12 @@ export const saveReplayInReplaySummary = async (
 		// trigger-build-mercenaries-match-stats
 		// sns.notifyMercenariesReviewPublished(reviewToNotify);
 	}
-	logger.debug('notifs sent');
+	// logger.debug('notifs sent');
 
 	return {
 		userName: userName,
 		replay: replay,
+		fullMetaData: fullMetaData,
 		reviewMessage: reviewToNotify,
 		replayString: replayString,
 		bgsPostMatchStats: null,
@@ -366,10 +426,17 @@ const toCreationDate = (today: Date): string => {
 	return `${today.toISOString().slice(0, 19).replace('T', ' ')}.${today.getMilliseconds()}`;
 };
 
-export const nullIfEmpty = (value: string): string => {
+export const nullIfEmpty = (value: string | number): string => {
 	return value == null || value == 'null' ? 'NULL' : `${SqlString.escape(value)}`;
 };
 
 const realNullIfEmpty = (value: string): string => {
 	return value == null || value == 'null' || value == 'NULL' ? null : `${SqlString.escape(value)}`;
+};
+
+const compressStats = (stats: any): string => {
+	const compressedStats = deflate(JSON.stringify(stats), { to: 'string' });
+	const buff = Buffer.from(compressedStats, 'utf8');
+	const base64data = buff.toString('base64');
+	return base64data;
 };
