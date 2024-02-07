@@ -16,7 +16,7 @@
 // 	const message = replayInfo.reviewMessage;
 // 	logger.debug('handling message', message);
 // 	if (!message.allowGameShare) {
-// 		logger.log('not allowing game share for duels high wins', message);
+// 		logger.debug('not allowing game share for duels high wins', message);
 // 		return;
 // 	}
 
@@ -138,7 +138,7 @@
 // 		.filter(dbfCardId => cards.getCardFromDbfId(dbfCardId[0]).collectible)
 // 		.filter(dbfCardId => !allDuelsSignatureTreasures.includes(cards.getCardFromDbfId(dbfCardId[0]).id as CardIds));
 // 	if (validCards.length !== 15) {
-// 		logger.log('valid cards', validCards);
+// 		logger.debug('valid cards', validCards);
 // 		logger.error('Invalid deck list', initialDecklist, decoded, validCards);
 // 		return null;
 // 	}

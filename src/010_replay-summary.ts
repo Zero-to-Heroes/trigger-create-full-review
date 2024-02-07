@@ -36,7 +36,6 @@ export const saveReplayInReplaySummary = async (
 		if (!!metadataStr?.length) {
 			fullMetaData = JSON.parse(metadataStr);
 		}
-		console.debug('fullMetaData', fullMetaData, replayString);
 		replayString = null; //replayString.substring(index + 1);
 	}
 
@@ -53,7 +52,6 @@ export const saveReplayInReplaySummary = async (
 	// logger.debug('will get replay string', metadata);
 
 	const debug = userName === 'daedin';
-	// debug && console.log('debug', replayString?.slice(0, 1000));
 
 	// if (replayString.includes(CardIds.Collectible.Rogue.MaestraOfTheMasquerade)) {
 	// 	logger.error('Maestra games not supported yet', metadata, message, replayString);
@@ -61,21 +59,25 @@ export const saveReplayInReplaySummary = async (
 	// }
 
 	const uploaderToken = 'overwolf-' + userId;
-	const deckstring = fullMetaData?.game.deckstring ?? undefinedAsNull(metadata['deckstring']);
-	const playerDeckName = fullMetaData?.game.deckName ?? undefinedAsNull(metadata['deck-name']);
-	const scenarioId = fullMetaData?.game.scenarioId ?? undefinedAsNull(metadata['scenario-id']);
-	const buildNumber = fullMetaData?.game.buildNumber ?? undefinedAsNull(metadata['build-number']);
-	const playerRank = fullMetaData?.game.playerRank ?? undefinedAsNull(metadata['player-rank']);
-	const newPlayerRank = fullMetaData?.game.newPlayerRank ?? undefinedAsNull(metadata['new-player-rank']);
-	const opponentRank = fullMetaData?.game.opponentRank ?? undefinedAsNull(metadata['opponent-rank']);
-	const gameMode = fullMetaData?.game.gameMode ?? undefinedAsNull(metadata['game-mode']);
-	const gameFormat: GameFormatString =
-		fullMetaData?.game.gameFormat ?? (undefinedAsNull(metadata['game-format']) as GameFormatString);
+	const deckstring = fullMetaData?.game ? fullMetaData.game.deckstring : undefinedAsNull(metadata['deckstring']);
+	const playerDeckName = fullMetaData?.game ? fullMetaData.game.deckName : undefinedAsNull(metadata['deck-name']);
+	const scenarioId = fullMetaData?.game ? fullMetaData.game.scenarioId : undefinedAsNull(metadata['scenario-id']);
+	const buildNumber = fullMetaData?.game ? fullMetaData.game.buildNumber : undefinedAsNull(metadata['build-number']);
+	const playerRank = fullMetaData?.game ? fullMetaData.game.playerRank : undefinedAsNull(metadata['player-rank']);
+	const newPlayerRank = fullMetaData?.game
+		? fullMetaData.game.newPlayerRank
+		: undefinedAsNull(metadata['new-player-rank']);
+	const opponentRank = fullMetaData?.game
+		? fullMetaData.game.opponentRank
+		: undefinedAsNull(metadata['opponent-rank']);
+	const gameMode = fullMetaData?.game ? fullMetaData.game.gameMode : undefinedAsNull(metadata['game-mode']);
+	const gameFormat: GameFormatString = fullMetaData?.game
+		? fullMetaData.game.gameFormat
+		: (undefinedAsNull(metadata['game-format']) as GameFormatString);
 	const application = fullMetaData?.meta.application ?? undefinedAsNull(metadata['application-key']);
 	const allowGameShare = fullMetaData?.meta.allowGameShare ?? getMetadataBool(metadata, 'allow-game-share');
 
-	const reviewId = fullMetaData?.game.reviewId ?? metadata['review-id'];
-	// console.debug('processing', reviewId);
+	const reviewId = fullMetaData?.game ? fullMetaData.game.reviewId : metadata['review-id'];
 	start = Date.now();
 	const mysql = await getConnection();
 	const existingReviewResult: any[] = await mysql.query(
@@ -83,7 +85,7 @@ export const saveReplayInReplaySummary = async (
 	);
 	logger.debug('got existingReviewResult after', Date.now() - start, 'ms', reviewId);
 
-	const inputReplayKey = fullMetaData?.game.replayKey ?? undefinedAsNull(metadata['replay-key']);
+	const inputReplayKey = fullMetaData?.game ? fullMetaData.game.replayKey : undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
 	const replayKey =
 		inputReplayKey ??
@@ -110,22 +112,20 @@ export const saveReplayInReplaySummary = async (
 		fullMetaData != null,
 		fullMetaData?.game.replayKey,
 	);
-	const playerName = fullMetaData?.game.mainPlayerName ?? replay.mainPlayerName;
-	const opponentName =
-		fullMetaData?.game.forceOpponentName ??
-		fullMetaData?.game.opponentPlayerName ??
-		undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ??
-		replay.opponentPlayerName;
-	const opponentCardId = fullMetaData?.game.opponentPlayerCardId ?? replay.opponentPlayerCardId;
-	const result = fullMetaData?.game.result ?? replay.result;
-	const additionalResult =
-		fullMetaData?.game.additionalResult ??
-		(gameMode === 'battlegrounds' || gameMode === 'battlegrounds-friendly'
-			? replay.additionalResult
-			: undefinedAsNull(metadata['additional-result']));
-	const playCoin = fullMetaData?.game.playCoin ?? replay.playCoin;
+	const playerName = fullMetaData?.game ? fullMetaData.game.mainPlayerName : replay.mainPlayerName;
+	const opponentName = fullMetaData?.game
+		? fullMetaData.game.forceOpponentName ?? fullMetaData.game.opponentPlayerName
+		: undefinedAsNull(decodeURIComponent(metadata['force-opponent-name'])) ?? replay.opponentPlayerName;
+	const opponentCardId = fullMetaData?.game ? fullMetaData.game.opponentPlayerCardId : replay.opponentPlayerCardId;
+	const result = fullMetaData?.game ? fullMetaData.game.result : replay.result;
+	const additionalResult = fullMetaData?.game
+		? fullMetaData.game.additionalResult
+		: gameMode === 'battlegrounds' || gameMode === 'battlegrounds-friendly'
+		? replay.additionalResult
+		: undefinedAsNull(metadata['additional-result']);
+	const playCoin = fullMetaData?.game ? fullMetaData.game.playCoin : replay.playCoin;
 
-	let playerCardId = fullMetaData?.game.mainPlayerCardId ?? replay.mainPlayerCardId;
+	let playerCardId = fullMetaData?.game ? fullMetaData.game.mainPlayerCardId : replay.mainPlayerCardId;
 	let playerClass = cards.getCard(playerCardId)?.playerClass?.toLowerCase();
 	if (!!deckstring?.length) {
 		try {
@@ -153,8 +153,9 @@ export const saveReplayInReplaySummary = async (
 	const opponentClass = cards.getCard(opponentCardId)?.playerClass?.toLowerCase();
 	const bgsHasPrizes = fullMetaData?.bgs?.hasPrizes ?? metadata['bgs-has-prizes'] === 'true';
 	const bgsHasSpells = fullMetaData?.bgs?.hasSpells ?? metadata['bgs-has-spells'] === 'true';
-	const runId =
-		fullMetaData?.game.runId ?? undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
+	const runId = fullMetaData?.game
+		? fullMetaData.game.runId
+		: undefinedAsNull(metadata['run-id']) ?? undefinedAsNull(metadata['duels-run-id']);
 	const bannedTribes = fullMetaData?.bgs?.bannedTribes ?? extractTribes(metadata['banned-races']);
 	const availableTribes = fullMetaData?.bgs?.availableTribes ?? extractTribes(metadata['available-races']);
 	const xpGained = fullMetaData?.meta.normalizedXpGained ?? undefinedAsNull(metadata['normalized-xp-gained']);
@@ -427,7 +428,7 @@ const toCreationDate = (today: Date): string => {
 };
 
 export const nullIfEmpty = (value: string | number): string => {
-	return value == null || value == 'null' ? 'NULL' : `${SqlString.escape(value)}`;
+	return value == null || value == 'null' || value == 'undefined' ? 'NULL' : `${SqlString.escape(value)}`;
 };
 
 const realNullIfEmpty = (value: string): string => {

@@ -23,7 +23,6 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 		return;
 	}
 
-	console.log('processing duels run end', message.runId, message);
 	const mysql = await getConnection();
 	const lootQuery = `
 		SELECT bundleType, 
@@ -174,7 +173,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 			)
 		`;
 		// Running as log to debug double queries
-		logger.log('running query', insertQuery, replayInfo.reviewMessage);
+		logger.debug('running query', insertQuery, replayInfo.reviewMessage);
 		await mysql.query(insertQuery);
 	} catch (e) {
 		logger.error('could not execute query', e);
