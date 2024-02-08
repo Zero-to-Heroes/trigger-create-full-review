@@ -12,11 +12,11 @@ import { ReviewMessage } from './review-message';
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, sns: Sns): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	if (message.gameMode !== 'battlegrounds' && message.gameMode !== 'battlegrounds-friendly') {
-		logger.debug('not battlegrounds', message);
+		// logger.debug('not battlegrounds', message);
 		return;
 	}
 	if (!message.additionalResult || isNaN(parseInt(message.additionalResult))) {
-		logger.debug('no end position', message);
+		// logger.debug('no end position', message);
 		return;
 	}
 
@@ -32,7 +32,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	// Because there is a race, the combat winrate might have been populated first
 	const mysql = await getConnection();
 	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds ?? (await retrieveCombatWinrate(message, mysql));
-	logger.debug('retrieved combat winrate?', combatWinrate);
+	// logger.debug('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
 	const row: InternalBgsRow = {
 		creationDate: new Date(message.creationDate),
@@ -96,7 +96,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			${nullIfEmpty(row.bgsAnomalies?.join(','))}
 		)
 	`;
-	logger.debug('running query', insertQuery);
+	// logger.debug('running query', insertQuery);
 	await mysql.query(insertQuery);
 
 	const bgPerfectGame = replayInfo?.fullMetaData?.bgs?.isPerfectGame ?? isBgPerfectGame(bgParsedInfo, replayInfo);
@@ -109,9 +109,9 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 				SET bgsPerfectGame = 1
 				WHERE reviewId = ${SqlString.escape(replayInfo.reviewMessage.reviewId)}
 			`;
-			logger.debug('running query', query);
+			// logger.debug('running query', query);
 			const result = await mysql.query(query);
-			logger.debug('result', result);
+			// logger.debug('result', result);
 		}
 	}
 	await mysql.end();
@@ -127,7 +127,7 @@ const buildWarbandStats = async (
 			turn: stat.turn,
 			totalStats: stat.value,
 		}));
-		logger.debug('built warband stats', replayInfo.reviewMessage.reviewId, result);
+		// logger.debug('built warband stats', replayInfo.reviewMessage.reviewId, result);
 		return result;
 	} catch (e) {
 		logger.error('Exception while building warband stats', e);
@@ -151,9 +151,9 @@ const retrieveCombatWinrate = async (
 		SELECT * FROM bgs_single_run_stats
 		WHERE reviewId = '${message.reviewId}'
 	`;
-	logger.debug('running query', query);
+	// logger.debug('running query', query);
 	const results: any[] = await mysql.query(query);
-	logger.debug('results', results);
+	// logger.debug('results', results);
 	if (!results?.length) {
 		return null;
 	}

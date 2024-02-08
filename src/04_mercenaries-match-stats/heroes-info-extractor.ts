@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { logger } from '@firestone-hs/aws-lambda-utils';
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { MercenariesReferenceData } from '../040_mercenaries-match-stats';
@@ -25,27 +24,27 @@ export const mercsHeroesInfosExtractor = (
 		return null;
 	}
 
-	logger.debug('replay mainPlayerId', replay.mainPlayerId);
+	// logger.debug('replay mainPlayerId', replay.mainPlayerId);
 	const heroesInfos = heroesInfosExtractor(replay, allCards, mercenariesReferenceData);
 	// logger.debug('heroesTiming', heroesTiming);
 
 	return [
 		...Object.keys(heroesInfos.timings).map(
-			heroCardId =>
+			(heroCardId) =>
 				({
 					statName: 'mercs-hero-timing',
 					statValue: heroCardId + '|' + heroesInfos.timings[heroCardId],
 				} as Stat),
 		),
 		...Object.keys(heroesInfos.opponentTimings).map(
-			heroCardId =>
+			(heroCardId) =>
 				({
 					statName: 'opponent-mercs-hero-timing',
 					statValue: heroCardId + '|' + heroesInfos.opponentTimings[heroCardId],
 				} as Stat),
 		),
 		...Object.keys(heroesInfos.equipments).map(
-			heroCardId =>
+			(heroCardId) =>
 				({
 					statName: 'mercs-hero-equipment',
 					statValue: heroCardId + '|' + heroesInfos.equipments[heroCardId],
@@ -60,14 +59,14 @@ export const mercsHeroesInfosExtractor = (
 		// 		} as Stat),
 		// ),
 		...Object.keys(heroesInfos.levels).map(
-			heroCardId =>
+			(heroCardId) =>
 				({
 					statName: 'mercs-hero-level',
 					statValue: heroCardId + '|' + heroesInfos.levels[heroCardId],
 				} as Stat),
 		),
 		...Object.keys(heroesInfos.skillUsages).map(
-			skillCardId =>
+			(skillCardId) =>
 				({
 					statName: 'mercs-hero-skill-used',
 					statValue: skillCardId + '|' + heroesInfos.skillUsages[skillCardId],

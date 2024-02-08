@@ -23,7 +23,7 @@ export const saveReplayInReplaySummary = async (
 
 	let start = Date.now();
 	let replayString = await s3.readZippedContent(bucketName, key);
-	logger.debug('got replayString after', Date.now() - start, 'ms', bucketName, key);
+	// logger.debug('got replayString after', Date.now() - start, 'ms', bucketName, key);
 	if (!replayString) {
 		logger.error('Could not read file, not processing review', bucketName, key);
 		return null;
@@ -83,7 +83,7 @@ export const saveReplayInReplaySummary = async (
 	const existingReviewResult: any[] = await mysql.query(
 		`SELECT * FROM replay_summary WHERE reviewId = '${reviewId}'`,
 	);
-	logger.debug('got existingReviewResult after', Date.now() - start, 'ms', reviewId);
+	// logger.debug('got existingReviewResult after', Date.now() - start, 'ms', reviewId);
 
 	const inputReplayKey = fullMetaData?.game ? fullMetaData.game.replayKey : undefinedAsNull(metadata['replay-key']);
 	const today = new Date();
@@ -95,7 +95,7 @@ export const saveReplayInReplaySummary = async (
 	let replay: Replay;
 	if (!fullMetaData) {
 		try {
-			logger.debug('will parse replay string');
+			// logger.debug('will parse replay string');
 			start = Date.now();
 			replay = parseHsReplayString(replayString, cards as any);
 		} catch (e) {
@@ -104,14 +104,14 @@ export const saveReplayInReplaySummary = async (
 		}
 	}
 
-	logger.debug(
-		'got parseHsReplayString after',
-		Date.now() - start,
-		'ms',
-		reviewId,
-		fullMetaData != null,
-		fullMetaData?.game.replayKey,
-	);
+	// logger.debug(
+	// 	'got parseHsReplayString after',
+	// 	Date.now() - start,
+	// 	'ms',
+	// 	reviewId,
+	// 	fullMetaData != null,
+	// 	fullMetaData?.game.replayKey,
+	// );
 	const playerName = fullMetaData?.game ? fullMetaData.game.mainPlayerName : replay.mainPlayerName;
 	const opponentName = fullMetaData?.game
 		? fullMetaData.game.forceOpponentName ?? fullMetaData.game.opponentPlayerName
@@ -231,7 +231,7 @@ export const saveReplayInReplaySummary = async (
 			replayString: replayString,
 			bgsPostMatchStats: null,
 		};
-		logger.debug('returning early', returnMessage);
+		// logger.debug('returning early', returnMessage);
 		return returnMessage;
 	}
 
@@ -239,7 +239,7 @@ export const saveReplayInReplaySummary = async (
 	if (!!replayString?.length) {
 		start = Date.now();
 		await s3.writeCompressedFile(replayString, 'xml.firestoneapp.com', replayKey);
-		logger.debug('file written after', Date.now() - start, 'ms', reviewId);
+		// logger.debug('file written after', Date.now() - start, 'ms', reviewId);
 	}
 
 	const existQuery = `

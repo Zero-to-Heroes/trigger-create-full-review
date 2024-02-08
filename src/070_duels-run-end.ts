@@ -107,7 +107,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 	}
 
 	const rating = allDecksResults.find((result) => result.playerRank != null)?.playerRank;
-	logger.debug('rating', rating, allDecksResults);
+	// logger.debug('rating', rating, allDecksResults);
 	const playerClass = findPlayerClass(firstGameInRun.playerClass, firstGameInRun.playerCardId, allCards);
 	const allTreasures = findTreasuresCardIds(lootResults, firstGameInRun.runId);
 	const row: InternalDuelsRow = {
@@ -173,7 +173,7 @@ export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 			)
 		`;
 		// Running as log to debug double queries
-		logger.debug('running query', insertQuery, replayInfo.reviewMessage);
+		// logger.debug('running query', insertQuery, replayInfo.reviewMessage);
 		await mysql.query(insertQuery);
 	} catch (e) {
 		logger.error('could not execute query', e);

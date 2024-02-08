@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { logBeforeTimeout, logger, S3, Sns } from '@firestone-hs/aws-lambda-utils';
+import { logBeforeTimeout, S3, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { saveReplayInReplaySummary } from './010_replay-summary';
@@ -39,29 +39,29 @@ export default async (event, context): Promise<any> => {
 const handleReplay = async (message, context): Promise<void> => {
 	const cleanup = logBeforeTimeout(context);
 	const start = Date.now();
-	logger.debug('start processing', message);
+	// logger.debug('start processing', message);
 	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
 	if (replayInfo) {
-		logger.debug('replayInfo');
+		// logger.debug('replayInfo');
 		await buildMatchStats(replayInfo);
-		logger.debug('after buildMatchStats');
+		// logger.debug('after buildMatchStats');
 		if (['battlegrounds', 'battlegrounds-friendly'].includes(replayInfo.reviewMessage.gameMode)) {
-			logger.debug('before buildBgsRunStats');
+			// logger.debug('before buildBgsRunStats');
 			await buildBgsRunStats(replayInfo, cards, sns);
-			logger.debug('after buildBgsRunStats');
+			// logger.debug('after buildBgsRunStats');
 			await buildBgsPostMatchStats(replayInfo, cards, s3);
-			logger.debug('after buildBgsPostMatchStats');
+			// logger.debug('after buildBgsPostMatchStats');
 		} else if (['mercenaries-pvp'].includes(replayInfo.reviewMessage.gameMode)) {
-			logger.debug('before buildMercenariesMatchStats');
+			// logger.debug('before buildMercenariesMatchStats');
 			await buildMercenariesMatchStats(replayInfo, cards);
-			logger.debug('after buildMercenariesMatchStats');
+			// logger.debug('after buildMercenariesMatchStats');
 		} else if (
 			['duels', 'paid-duels'].includes(replayInfo.reviewMessage.gameMode) &&
 			replayInfo.reviewMessage.additionalResult
 		) {
-			logger.debug('before updateDuelsLeaderboard');
+			// logger.debug('before updateDuelsLeaderboard');
 			await updateDuelsLeaderboard(replayInfo);
-			logger.debug('after updateDuelsLeaderboard');
+			// logger.debug('after updateDuelsLeaderboard');
 			const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map((info) => parseInt(info));
 			// Handled as part of the RunEnd process
 			// if (
@@ -74,23 +74,22 @@ const handleReplay = async (message, context): Promise<void> => {
 				(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
 				(losses === 2 && replayInfo.reviewMessage.result === 'lost')
 			) {
-				logger.debug('before handleDuelsRunEnd');
+				// logger.debug('before handleDuelsRunEnd');
 				await handleDuelsRunEnd(replayInfo, cards);
-				logger.debug('after handleDuelsRunEnd');
+				// logger.debug('after handleDuelsRunEnd');
 			}
 		}
 	}
 	if (replayInfo?.userName === 'daedin' || replayInfo?.reviewMessage.appChannel === 'beta') {
-		console.debug(
-			'request processing took',
-			Date.now() - start,
-			'ms',
-			'with new process?',
-			!!replayInfo.fullMetaData,
-			replayInfo?.userName,
-			replayInfo?.reviewMessage?.gameMode,
-		);
-		// logger.dumpBuffer();
+		// console.debug(
+		// 	'request processing took',
+		// 	Date.now() - start,
+		// 	'ms',
+		// 	'with new process?',
+		// 	!!replayInfo.fullMetaData,
+		// 	replayInfo?.userName,
+		// 	replayInfo?.reviewMessage?.gameMode,
+		// );
 	}
 	cleanup();
 };

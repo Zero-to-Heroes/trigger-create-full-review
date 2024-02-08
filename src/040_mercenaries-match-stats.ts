@@ -34,11 +34,11 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 		return;
 	}
 
-	logger.debug(
-		'processing',
-		message,
-		// scenarioId === ScenarioId.LETTUCE_MAP_PVE ? isNaN(parseInt(message.mercBountyId as any)) : null,
-	);
+	// logger.debug(
+	// 	'processing',
+	// 	message,
+	// 	// scenarioId === ScenarioId.LETTUCE_MAP_PVE ? isNaN(parseInt(message.mercBountyId as any)) : null,
+	// );
 
 	if (!mercenariesReferenceData) {
 		const strReferenceData = await http(
@@ -52,7 +52,7 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 	const replay: Replay = replayInfo.replay;
 	const numberOfTurns = replayInfo?.fullMetaData?.game.totalDurationTurns ?? extractTotalTurns(replay);
 	if (numberOfTurns <= 3) {
-		logger.debug('game too short, not including it for stats', numberOfTurns);
+		// logger.debug('game too short, not including it for stats', numberOfTurns);
 		return;
 	}
 
