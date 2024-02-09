@@ -81,15 +81,16 @@ const handleReplay = async (message, context): Promise<void> => {
 		}
 	}
 	if (replayInfo?.userName === 'daedin' || replayInfo?.reviewMessage.appChannel === 'beta') {
-		// console.debug(
-		// 	'request processing took',
-		// 	Date.now() - start,
-		// 	'ms',
-		// 	'with new process?',
-		// 	!!replayInfo.fullMetaData,
-		// 	replayInfo?.userName,
-		// 	replayInfo?.reviewMessage?.gameMode,
-		// );
+		console.debug(
+			'request processing took',
+			Date.now() - start,
+			'ms',
+			'with new process?',
+			!!replayInfo.fullMetaData,
+			replayInfo?.userName,
+			replayInfo?.reviewMessage?.gameMode,
+			replayInfo?.fullMetaData?.game?.reviewId,
+		);
 	}
 	cleanup();
 };

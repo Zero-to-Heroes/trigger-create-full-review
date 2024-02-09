@@ -193,6 +193,7 @@ export const saveReplayInReplaySummary = async (
 		userName: userName,
 		uploaderToken: uploaderToken,
 		replayKey: replayKey,
+		metadataKey: key,
 		application: application,
 		availableTribes: availableTribes,
 		bannedTribes: bannedTribes,
@@ -312,8 +313,8 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(playerName)},
 				${nullIfEmpty(playerClass)},
 				${nullIfEmpty(playerCardId)},
-				${nullIfEmpty(playerRank)},
-				${nullIfEmpty(newPlayerRank)},
+				${nullIfEmpty(gameMode === 'mercenaries-pve' ? null : playerRank)},
+				${nullIfEmpty(gameMode === 'mercenaries-pve' ? null : newPlayerRank)},
 				${nullIfEmpty(playerDeckName)},
 				${nullIfEmpty(deckstring)},
 				${nullIfEmpty(opponentName)},
@@ -355,6 +356,7 @@ export const saveReplayInReplaySummary = async (
 	await mysql.end();
 	// logger.debug('closed connection');
 
+	debug && console.debug(reviewToNotify.userName, 'will send SNS', gameMode, reviewToNotify);
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		// // duels-leaderboard
 		// // sns.notifyDuelsReviewPublished(reviewToNotify);
