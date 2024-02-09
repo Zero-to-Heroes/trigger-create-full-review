@@ -25,6 +25,7 @@ export interface ReviewMessage {
 	readonly scenarioId: string;
 	readonly additionalResult: string;
 	readonly replayKey: string;
+	readonly metadataKey: string;
 	readonly application: string;
 	readonly availableTribes: readonly Race[];
 	readonly bannedTribes: readonly Race[];
