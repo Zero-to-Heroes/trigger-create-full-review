@@ -3,13 +3,13 @@ import { getConnection, logger, S3, Sns } from '@firestone-hs/aws-lambda-utils';
 import { decode } from '@firestone-hs/deckstrings';
 import { BgsHeroQuest, parseHsReplayString, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService, GameFormatString, Race } from '@firestone-hs/reference-data';
+import { ReplayUploadMetadata } from '@firestone-hs/replay-metadata';
 import { Metadata } from 'aws-sdk/clients/s3';
 import { deflate } from 'pako';
 import SqlString from 'sqlstring';
 import { v4 } from 'uuid';
 import { ReplayInfo } from './create-full-review';
 import { getDefaultHeroDbfIdForClass } from './hs-utils';
-import { ReplayUploadMetadata } from './public-api';
 import { ReviewMessage } from './review-message';
 
 export const saveReplayInReplaySummary = async (
@@ -72,7 +72,7 @@ export const saveReplayInReplaySummary = async (
 		: undefinedAsNull(metadata['opponent-rank']);
 	const gameMode = fullMetaData?.game ? fullMetaData.game.gameMode : undefinedAsNull(metadata['game-mode']);
 	const gameFormat: GameFormatString = fullMetaData?.game
-		? fullMetaData.game.gameFormat
+		? (fullMetaData.game.gameFormat as GameFormatString)
 		: (undefinedAsNull(metadata['game-format']) as GameFormatString);
 	const application = fullMetaData?.meta.application ?? undefinedAsNull(metadata['application-key']);
 	const allowGameShare = fullMetaData?.meta.allowGameShare ?? getMetadataBool(metadata, 'allow-game-share');

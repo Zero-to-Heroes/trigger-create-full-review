@@ -2,6 +2,7 @@
 import { logBeforeTimeout, S3, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
+import { ReplayUploadMetadata } from '@firestone-hs/replay-metadata';
 import { saveReplayInReplaySummary } from './010_replay-summary';
 import { buildMatchStats } from './020_match-stats';
 import { buildBgsRunStats } from './030_bgs-run-stats';
@@ -9,7 +10,6 @@ import { buildBgsPostMatchStats } from './035_bgs-post-match-stats';
 import { buildMercenariesMatchStats } from './040_mercenaries-match-stats';
 import { updateDuelsLeaderboard } from './050_duels-leaderboard';
 import { handleDuelsRunEnd } from './070_duels-run-end';
-import { ReplayUploadMetadata } from './public-api';
 import { ReviewMessage } from './review-message';
 
 const s3 = new S3();
