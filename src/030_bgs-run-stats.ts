@@ -40,7 +40,7 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		reviewId: message.reviewId,
 		rank: parseInt(message.additionalResult),
 		heroCardId: heroCardId,
-		rating: playerRank == null ? null : parseInt(playerRank),
+		rating: playerRank == null || isNaN(parseInt(playerRank)) ? null : parseInt(playerRank),
 		tribes: message.availableTribes
 			?.map((tribe) => tribe.toString())
 			.sort()
