@@ -19,6 +19,7 @@
 		"dist/**/*"
 	],
 	"dependencies": {
+		"@firestone-hs/arena-draft-pick": "^1.0.7",
 		"@firestone-hs/aws-lambda-utils": "^0.0.60",
 		"@firestone-hs/deckstrings": "^2.2.7",
 		"@firestone-hs/hs-replay-xml-parser": "^0.0.129",

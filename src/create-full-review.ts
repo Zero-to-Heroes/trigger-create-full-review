@@ -10,6 +10,7 @@ import { buildBgsPostMatchStats } from './035_bgs-post-match-stats';
 import { buildMercenariesMatchStats } from './040_mercenaries-match-stats';
 import { updateDuelsLeaderboard } from './050_duels-leaderboard';
 import { handleDuelsRunEnd } from './070_duels-run-end';
+import { handleArenaRunEnd } from './080_arena-run-end';
 import { ReviewMessage } from './review-message';
 
 const s3 = new S3();
@@ -59,24 +60,21 @@ const handleReplay = async (message, context): Promise<void> => {
 			['duels', 'paid-duels'].includes(replayInfo.reviewMessage.gameMode) &&
 			replayInfo.reviewMessage.additionalResult
 		) {
-			// logger.debug('before updateDuelsLeaderboard');
 			await updateDuelsLeaderboard(replayInfo);
-			// logger.debug('after updateDuelsLeaderboard');
 			const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map((info) => parseInt(info));
-			// Handled as part of the RunEnd process
-			// if (
-			// 	(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
-			// 	(losses === 2 && replayInfo.reviewMessage.result === 'lost' && wins >= 10)
-			// ) {
-			// 	await handleDuelsHighWins(replayInfo, cards);
-			// }
 			if (
 				(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
 				(losses === 2 && replayInfo.reviewMessage.result === 'lost')
 			) {
-				// logger.debug('before handleDuelsRunEnd');
 				await handleDuelsRunEnd(replayInfo, cards);
-				// logger.debug('after handleDuelsRunEnd');
+			}
+		} else if (['arena'].includes(replayInfo.reviewMessage.gameMode) && replayInfo.reviewMessage.additionalResult) {
+			const [wins, losses] = replayInfo.reviewMessage.additionalResult.split('-').map((info) => parseInt(info));
+			if (
+				(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
+				(losses === 2 && replayInfo.reviewMessage.result === 'lost')
+			) {
+				await handleArenaRunEnd(replayInfo, cards);
 			}
 		}
 	}
