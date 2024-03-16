@@ -30,7 +30,7 @@ export const handleArenaRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 
 const saveRun = async (mysql: ServerlessMysql, run: ArenaHighWinRun) => {
 	const query = `
-		INSERT INTO arena_stats_by_run
+		INSERT IGNORE INTO arena_stats_by_run
 		(creationDate, runId, playerClass, decklist, wins, losses, buildNumber, allowGameShare)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`;
