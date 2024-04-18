@@ -120,7 +120,7 @@ export const saveReplayInReplaySummary = async (
 	const result = fullMetaData?.game ? fullMetaData.game.result : replay.result;
 	const additionalResult = fullMetaData?.game
 		? fullMetaData.game.additionalResult
-		: gameMode === 'battlegrounds' || gameMode === 'battlegrounds-friendly'
+		: gameMode === 'battlegrounds' || gameMode === 'battlegrounds-friendly' || gameMode === 'battlegrounds-duo'
 		? replay.additionalResult
 		: undefinedAsNull(metadata['additional-result']);
 	const playCoin = fullMetaData?.game ? fullMetaData.game.playCoin : replay.playCoin;
@@ -161,9 +161,11 @@ export const saveReplayInReplaySummary = async (
 	const xpGained = fullMetaData?.meta.normalizedXpGained ?? undefinedAsNull(metadata['normalized-xp-gained']);
 
 	const quests: readonly BgsHeroQuest[] =
-		fullMetaData?.bgs?.heroQuests ?? (gameMode === 'battlegrounds' ? replay?.bgsHeroQuests ?? [] : []);
+		fullMetaData?.bgs?.heroQuests ??
+		(gameMode === 'battlegrounds' || gameMode === 'battlegrounds-duo' ? replay?.bgsHeroQuests ?? [] : []);
 	const bgsAnomalies: readonly string[] =
-		fullMetaData?.bgs?.anomalies ?? (gameMode === 'battlegrounds' ? replay?.bgsAnomalies ?? [] : []);
+		fullMetaData?.bgs?.anomalies ??
+		(gameMode === 'battlegrounds' || gameMode === 'battlegrounds-duo' ? replay?.bgsAnomalies ?? [] : []);
 	const bgBattleOdds: readonly { turn: number; wonPercent: number }[] =
 		fullMetaData?.bgs?.battleOdds ??
 		(!!metadata['bg-battle-odds']?.length ? JSON.parse(metadata['bg-battle-odds']) : []);
@@ -377,7 +379,7 @@ export const saveReplayInReplaySummary = async (
 		sns.notify(process.env.ARENA_REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
-	} else if (['battlegrounds', 'battlegrounds-friendly'].includes(gameMode)) {
+	} else if (['battlegrounds', 'battlegrounds-friendly', 'battlegrounds-duo'].includes(gameMode)) {
 		// trigger-build-bgs-run-stats
 		// sns.notifyBattlegroundsReviewPublished(reviewToNotify);
 	} else if (

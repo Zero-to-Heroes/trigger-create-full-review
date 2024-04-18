@@ -46,7 +46,9 @@ const handleReplay = async (message, context): Promise<void> => {
 		// logger.debug('replayInfo');
 		await buildMatchStats(replayInfo);
 		// logger.debug('after buildMatchStats');
-		if (['battlegrounds', 'battlegrounds-friendly'].includes(replayInfo.reviewMessage.gameMode)) {
+		if (
+			['battlegrounds', 'battlegrounds-friendly', 'battlegrounds-duo'].includes(replayInfo.reviewMessage.gameMode)
+		) {
 			// logger.debug('before buildBgsRunStats');
 			await buildBgsRunStats(replayInfo, cards, sns);
 			// logger.debug('after buildBgsRunStats');

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { getConnection, logger, Sns } from '@firestone-hs/aws-lambda-utils';
-import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { inflate } from 'pako';
 import { ServerlessMysql } from 'serverless-mysql';
@@ -11,7 +11,11 @@ import { ReviewMessage } from './review-message';
 
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, sns: Sns): Promise<void> => {
 	const message = replayInfo.reviewMessage;
-	if (message.gameMode !== 'battlegrounds' && message.gameMode !== 'battlegrounds-friendly') {
+	if (
+		message.gameMode !== 'battlegrounds' &&
+		message.gameMode !== 'battlegrounds-friendly' &&
+		message.gameMode !== 'battlegrounds-duo'
+	) {
 		// logger.debug('not battlegrounds', message);
 		return;
 	}
@@ -21,19 +25,119 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 	}
 
 	// Handling skins
-	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
 
 	const replayString = replayInfo.replayString;
 	const bgParsedInfo = replayInfo?.fullMetaData?.bgs?.warbandStats
 		? null
 		: parseBattlegroundsGame(replayString, null, null, null, allCards);
+
+	const mysql = await getConnection();
+	if (message.gameMode === 'battlegrounds-duo') {
+		await handleDuoGame(replayInfo, bgParsedInfo, allCards, mysql, sns);
+	} else {
+		handleSoloGame(replayInfo, bgParsedInfo, allCards, mysql, sns);
+	}
+	await mysql.end();
+};
+
+const handleDuoGame = async (
+	replayInfo: ReplayInfo,
+	bgParsedInfo: BgsPostMatchStats,
+	allCards: AllCardsService,
+	mysql: ServerlessMysql,
+	sns: Sns,
+) => {
+	const message = replayInfo.reviewMessage;
+	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
 	const warbandStats =
 		replayInfo?.fullMetaData?.bgs?.warbandStats ?? (await buildWarbandStats(bgParsedInfo, replayInfo));
 	// Because there is a race, the combat winrate might have been populated first
-	const mysql = await getConnection();
 	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds ?? (await retrieveCombatWinrate(message, mysql));
 	// logger.debug('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
+
+	const row: InternalBgsRow = {
+		creationDate: new Date(message.creationDate),
+		buildNumber: message.buildNumber,
+		reviewId: message.reviewId,
+		rank: parseInt(message.additionalResult),
+		heroCardId: heroCardId,
+		rating: playerRank == null || isNaN(parseInt(playerRank)) ? null : parseInt(playerRank),
+		tribes: message.availableTribes
+			?.map((tribe) => tribe.toString())
+			.sort()
+			.join(','),
+		darkmoonPrizes: false,
+		warbandStats: warbandStats,
+		combatWinrate: combatWinrate,
+		quests: message.bgsHasQuests,
+		bgsHeroQuests: message.bgsHeroQuests,
+		bgsQuestsCompletedTimings: message.bgsQuestsCompletedTimings,
+		bgsQuestsDifficulties: message.bgsQuestsDifficulties,
+		bgsHeroQuestRewards: message.bgsHeroQuestRewards,
+		bgsAnomalies: message.bgsAnomalies,
+	} as InternalBgsRow;
+
+	const insertQuery = `
+		INSERT IGNORE INTO bgs_run_stats_duo
+		(
+			creationDate,
+			buildNumber,
+			rank,
+			heroCardId,
+			rating,
+			reviewId,
+			darkmoonPrizes,
+			tribes,
+			combatWinrate,
+			warbandStats,
+			quests,
+			bgsHeroQuests,
+			bgsQuestsCompletedTimings,
+			bgsQuestsDifficulties,
+			bgsHeroQuestRewards,
+			bgsAnomalies
+		)
+		VALUES 
+		(
+			${SqlString.escape(row.creationDate)},
+			${SqlString.escape(row.buildNumber)}, 
+			${SqlString.escape(row.rank)}, 
+			${SqlString.escape(row.heroCardId)},
+			${SqlString.escape(row.rating)},
+			${SqlString.escape(row.reviewId)},
+			${SqlString.escape(row.darkmoonPrizes)},
+			${SqlString.escape(row.tribes)},
+			${SqlString.escape(JSON.stringify(row.combatWinrate))},
+			${SqlString.escape(JSON.stringify(row.warbandStats))},
+			${SqlString.escape(row.quests)},
+			${nullIfEmpty(row.bgsHeroQuests?.join(','))},
+			${nullIfEmpty(row.bgsQuestsCompletedTimings?.join(','))},
+			${nullIfEmpty(row.bgsQuestsDifficulties?.join(','))},
+			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))},
+			${nullIfEmpty(row.bgsAnomalies?.join(','))}
+		)
+	`;
+	// logger.debug('running query', insertQuery);
+	await mysql.query(insertQuery);
+};
+
+const handleSoloGame = async (
+	replayInfo: ReplayInfo,
+	bgParsedInfo: BgsPostMatchStats,
+	allCards: AllCardsService,
+	mysql: ServerlessMysql,
+	sns: Sns,
+) => {
+	const message = replayInfo.reviewMessage;
+	const heroCardId = normalizeHeroCardId(message.playerCardId, allCards);
+	const warbandStats =
+		replayInfo?.fullMetaData?.bgs?.warbandStats ?? (await buildWarbandStats(bgParsedInfo, replayInfo));
+	// Because there is a race, the combat winrate might have been populated first
+	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds ?? (await retrieveCombatWinrate(message, mysql));
+	// logger.debug('retrieved combat winrate?', combatWinrate);
+	const playerRank = message.playerRank ?? message.newPlayerRank;
+
 	const row: InternalBgsRow = {
 		creationDate: new Date(message.creationDate),
 		buildNumber: message.buildNumber,
@@ -114,7 +218,6 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 			// logger.debug('result', result);
 		}
 	}
-	await mysql.end();
 };
 
 const buildWarbandStats = async (

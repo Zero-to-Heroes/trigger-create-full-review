@@ -7,7 +7,11 @@ export const bgsHeroPickExtractor = async (
 	replay: Replay,
 	replayString: string,
 ): Promise<readonly Stat[]> => {
-	if (message.gameMode !== 'battlegrounds' && message.gameMode !== 'battlegrounds-friendly') {
+	if (
+		message.gameMode !== 'battlegrounds' &&
+		message.gameMode !== 'battlegrounds-friendly' &&
+		message.gameMode !== 'battlegrounds-duo'
+	) {
 		return null;
 	}
 
@@ -18,9 +22,9 @@ export const bgsHeroPickExtractor = async (
 
 	return [
 		...pickOptions
-			.map(option => option.get('cardID'))
+			.map((option) => option.get('cardID'))
 			.map(
-				pick =>
+				(pick) =>
 					({
 						statName: 'bgs-hero-pick-option',
 						statValue: pick,

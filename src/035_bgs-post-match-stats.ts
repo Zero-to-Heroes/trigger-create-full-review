@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { S3, getConnection } from '@firestone-hs/aws-lambda-utils';
-import { BgsPostMatchStats } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { BgsPostMatchStats } from '@firestone-hs/hs-replay-xml-parser';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { deflate } from 'pako';
 import SqlString from 'sqlstring';
