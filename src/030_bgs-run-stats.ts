@@ -2,12 +2,10 @@
 import { getConnection, logger, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser';
 import { AllCardsService } from '@firestone-hs/reference-data';
-import { inflate } from 'pako';
 import { ServerlessMysql } from 'serverless-mysql';
 import SqlString from 'sqlstring';
 import { nullIfEmpty } from './010_replay-summary';
 import { ReplayInfo } from './create-full-review';
-import { ReviewMessage } from './review-message';
 
 export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, sns: Sns): Promise<void> => {
 	const message = replayInfo.reviewMessage;
@@ -52,7 +50,7 @@ const handleDuoGame = async (
 	const warbandStats =
 		replayInfo?.fullMetaData?.bgs?.warbandStats ?? (await buildWarbandStats(bgParsedInfo, replayInfo));
 	// Because there is a race, the combat winrate might have been populated first
-	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds ?? (await retrieveCombatWinrate(message, mysql));
+	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds;
 	// logger.debug('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
 
@@ -134,7 +132,7 @@ const handleSoloGame = async (
 	const warbandStats =
 		replayInfo?.fullMetaData?.bgs?.warbandStats ?? (await buildWarbandStats(bgParsedInfo, replayInfo));
 	// Because there is a race, the combat winrate might have been populated first
-	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds ?? (await retrieveCombatWinrate(message, mysql));
+	const combatWinrate = replayInfo?.fullMetaData?.bgs?.battleOdds;
 	// logger.debug('retrieved combat winrate?', combatWinrate);
 	const playerRank = message.playerRank ?? message.newPlayerRank;
 
@@ -238,37 +236,6 @@ const buildWarbandStats = async (
 	}
 };
 
-const retrieveCombatWinrate = async (
-	message: ReviewMessage,
-	mysql: ServerlessMysql,
-): Promise<readonly InternalCombatWinrate[]> => {
-	if (message.bgBattleOdds?.length) {
-		return message.bgBattleOdds.map((odd) => ({
-			turn: odd.turn,
-			winrate: odd.wonPercent,
-		}));
-	}
-
-	// TODO: deprecate this
-	const query = `
-		SELECT * FROM bgs_single_run_stats
-		WHERE reviewId = '${message.reviewId}'
-	`;
-	// logger.debug('running query', query);
-	const results: any[] = await mysql.query(query);
-	// logger.debug('results', results);
-	if (!results?.length) {
-		return null;
-	}
-	const stats = parseStats(results[0].jsonStats);
-	return stats.battleResultHistory
-		.filter((result) => result?.simulationResult?.wonPercent != null)
-		.map((result) => ({
-			turn: result.turn,
-			winrate: Math.round(10 * result.simulationResult.wonPercent) / 10,
-		}));
-};
-
 const isBgPerfectGame = (bgParsedInfo: BgsPostMatchStats, replayInfo: ReplayInfo): boolean => {
 	if (!replayInfo.reviewMessage.additionalResult || parseInt(replayInfo.reviewMessage.additionalResult) !== 1) {
 		return false;
@@ -285,21 +252,6 @@ const isBgPerfectGame = (bgParsedInfo: BgsPostMatchStats, replayInfo: ReplayInfo
 	const startingHp = maxHp;
 	const endHp = mainPlayerHpOverTurn[mainPlayerHpOverTurn.length - 1].value;
 	return endHp === startingHp;
-};
-
-const parseStats = (inputStats: string): BgsPostMatchStats => {
-	try {
-		const parsed = JSON.parse(inputStats);
-		return parsed;
-	} catch (e) {
-		try {
-			const fromBase64 = Buffer.from(inputStats, 'base64').toString();
-			const inflated = inflate(fromBase64, { to: 'string' });
-			return JSON.parse(inflated);
-		} catch (e) {
-			logger.warn('Could not build full stats, ignoring review', inputStats);
-		}
-	}
 };
 
 const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService): string => {
@@ -340,7 +292,10 @@ interface InternalBgsRow {
 	readonly reviewId: string;
 	readonly tribes: string;
 	readonly darkmoonPrizes: boolean;
-	readonly combatWinrate: readonly InternalCombatWinrate[];
+	readonly combatWinrate: readonly {
+		turn: number;
+		wonPercent: number;
+	}[];
 	readonly warbandStats: readonly InternalWarbandStats[];
 	readonly quests: boolean;
 	readonly bgsHeroQuests: readonly string[];

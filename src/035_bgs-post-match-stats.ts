@@ -4,6 +4,7 @@ import { BgsPostMatchStats } from '@firestone-hs/hs-replay-xml-parser';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { deflate } from 'pako';
 import SqlString from 'sqlstring';
+import { gzipSync } from 'zlib';
 import { ReplayInfo } from './create-full-review';
 
 export const buildBgsPostMatchStats = async (
@@ -15,6 +16,13 @@ export const buildBgsPostMatchStats = async (
 		return;
 	}
 
+	await s3.writeFile(
+		gzipSync(JSON.stringify(replayInfo.fullMetaData.bgs.postMatchStats)),
+		'bgs-post-match-stats.firestoneapp.com',
+		`${replayInfo.reviewMessage.reviewId}.gz.json`,
+		'application/json',
+		'gzip',
+	);
 	const compressedStats: string = compressPostMatchStats(replayInfo.fullMetaData.bgs.postMatchStats, 51000);
 	const userName = replayInfo.userName ? `'${replayInfo.userName}'` : 'NULL';
 	const heroCardId = replayInfo.fullMetaData.game.mainPlayerCardId
