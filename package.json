@@ -24,7 +24,7 @@
 		"@firestone-hs/deckstrings": "^2.2.7",
 		"@firestone-hs/hs-replay-xml-parser": "^0.0.135",
 		"@firestone-hs/reference-data": "^2.0.24",
-		"@firestone-hs/replay-metadata": "^0.0.60",
+		"@firestone-hs/replay-metadata": "^0.0.66",
 		"@types/elementtree": "^0.1.0",
 		"aws-sdk": "^2.1040.0",
 		"cross-fetch": "^3.1.5",

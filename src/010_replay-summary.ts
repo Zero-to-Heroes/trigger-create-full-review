@@ -224,6 +224,9 @@ export const saveReplayInReplaySummary = async (
 
 	// const debug = reviewToNotify.appChannel === 'beta';
 	// logger.debug('built review message');
+	const uniqueGameId = fullMetaData?.game?.uniqueId;
+	const isPremium = fullMetaData?.user?.isPremium ?? false;
+	const seasonId = fullMetaData?.game?.seasonId;
 
 	if (existingReviewResult.length > 0) {
 		const returnMessage = {
@@ -299,7 +302,10 @@ export const saveReplayInReplaySummary = async (
 				finalComp,
 				normalizedXpGain,
 				totalDurationSeconds,
-				totalDurationTurns
+				totalDurationTurns,
+				uniqueGameId,
+				isPremium,
+				seasonId
 			)
 			VALUES
 			(
@@ -348,7 +354,10 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(fullMetaData?.bgs?.finalComp ? compressStats(fullMetaData.bgs.finalComp) : null)},
 				${nullIfEmpty(fullMetaData?.meta?.normalizedXpGained)},
 				${nullIfEmpty(fullMetaData?.game.totalDurationSeconds)},
-				${nullIfEmpty(fullMetaData?.game.totalDurationTurns)}
+				${nullIfEmpty(fullMetaData?.game.totalDurationTurns)},
+				${nullIfEmpty(uniqueGameId)},
+				${isPremium ? 1 : 0},
+				${nullIfEmpty(seasonId)}
 			)
 		`;
 		// logger.debug('running query', query);
