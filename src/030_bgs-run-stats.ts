@@ -81,7 +81,7 @@ const handleDuoGame = async (
 		(
 			creationDate,
 			buildNumber,
-			rank,
+			playerRank,
 			heroCardId,
 			rating,
 			reviewId,
@@ -163,7 +163,7 @@ const handleSoloGame = async (
 		(
 			creationDate,
 			buildNumber,
-			rank,
+			playerRank,
 			heroCardId,
 			rating,
 			reviewId,
