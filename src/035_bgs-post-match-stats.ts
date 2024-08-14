@@ -9,7 +9,16 @@ export const buildBgsPostMatchStats = async (
 	allCards: AllCardsService,
 	s3: S3,
 ): Promise<void> => {
+	const debug = replayInfo.userName === 'daedin';
+	debug &&
+		console.debug(
+			'[debug] saving post-match stats',
+			replayInfo.reviewMessage.reviewId,
+			replayInfo.fullMetaData?.bgs?.postMatchStats,
+		);
+
 	if (!replayInfo.fullMetaData?.bgs?.postMatchStats) {
+		debug && console.debug('[debug] empty post-match stats', replayInfo.reviewMessage.reviewId);
 		return;
 	}
 
@@ -20,32 +29,7 @@ export const buildBgsPostMatchStats = async (
 		'application/json',
 		'gzip',
 	);
-	// const compressedStats: string = compressPostMatchStats(replayInfo.fullMetaData.bgs.postMatchStats, 51000);
-	// const userName = replayInfo.userName ? `'${replayInfo.userName}'` : 'NULL';
-	// const heroCardId = replayInfo.fullMetaData.game.mainPlayerCardId
-	// 	? `'${replayInfo.fullMetaData.game.mainPlayerCardId}'`
-	// 	: 'NULL';
-	// const query = `
-	// 	INSERT IGNORE INTO bgs_single_run_stats
-	// 	(
-	// 		reviewId,
-	// 		jsonStats,
-	// 		userId,
-	// 		userName,
-	// 		heroCardId
-	// 	)
-	// 	VALUES
-	// 	(
-	// 		${SqlString.escape(replayInfo.reviewMessage.reviewId)},
-	// 		'${compressedStats}',
-	// 		${SqlString.escape(replayInfo.reviewMessage.userId)},
-	// 		${userName},
-	// 		${heroCardId}
-	// 	)
-	// `;
-	// const mysql = await getConnection();
-	// const dbResults: any[] = await mysql.query(query);
-	// mysql.end();
+	debug && console.debug('[debug] saved post-match stats', replayInfo.reviewMessage.reviewId);
 
 	// Intentionally leaving out the "best stats" table, as it's resource-intensive and not used
 };
