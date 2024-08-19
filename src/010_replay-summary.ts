@@ -220,6 +220,8 @@ export const saveReplayInReplaySummary = async (
 		bgBattleOdds: bgBattleOdds,
 		bgsHasAnomalies: fullMetaData?.bgs?.hasAnomalies ?? replay?.hasBgsAnomalies,
 		bgsAnomalies: bgsAnomalies,
+		bgsHasTrinkets: fullMetaData?.bgs?.hasTrinkets ?? replay?.hasBgsTrinkets,
+		bgsTrinkets: fullMetaData?.bgs?.trinkets?.map((t) => t.cardId),
 	};
 
 	// const debug = reviewToNotify.appChannel === 'beta';
@@ -305,7 +307,9 @@ export const saveReplayInReplaySummary = async (
 				totalDurationTurns,
 				uniqueGameId,
 				isPremium,
-				seasonId
+				seasonId,
+				bgsHasTrinkets,
+				bgsTrinkets
 			)
 			VALUES
 			(
@@ -357,7 +361,9 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(fullMetaData?.game.totalDurationTurns)},
 				${nullIfEmpty(uniqueGameId)},
 				${isPremium ? 1 : 0},
-				${nullIfEmpty(seasonId)}
+				${nullIfEmpty(seasonId)},
+				${nullIfEmpty(fullMetaData?.bgs?.hasTrinkets ? 1 : 0)},
+				${nullIfEmpty(fullMetaData?.bgs?.trinkets?.map((t) => t.cardId).join(','))}
 			)
 		`;
 		// logger.debug('running query', query);

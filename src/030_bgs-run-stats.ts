@@ -74,7 +74,8 @@ const handleDuoGame = async (
 		bgsQuestsDifficulties: message.bgsQuestsDifficulties,
 		bgsHeroQuestRewards: message.bgsHeroQuestRewards,
 		bgsAnomalies: message.bgsAnomalies,
-	} as InternalBgsRow;
+		bgsTrinkets: message.bgsTrinkets,
+	};
 
 	const insertQuery = `
 		INSERT IGNORE INTO bgs_run_stats_duo
@@ -94,7 +95,8 @@ const handleDuoGame = async (
 			bgsQuestsCompletedTimings,
 			bgsQuestsDifficulties,
 			bgsHeroQuestRewards,
-			bgsAnomalies
+			bgsAnomalies,
+			bgsTrinkets
 		)
 		VALUES 
 		(
@@ -113,7 +115,8 @@ const handleDuoGame = async (
 			${nullIfEmpty(row.bgsQuestsCompletedTimings?.join(','))},
 			${nullIfEmpty(row.bgsQuestsDifficulties?.join(','))},
 			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))},
-			${nullIfEmpty(row.bgsAnomalies?.join(','))}
+			${nullIfEmpty(row.bgsAnomalies?.join(','))},
+			${nullIfEmpty(row.bgsTrinkets?.join(','))}
 		)
 	`;
 	// logger.debug('running query', insertQuery);
@@ -156,7 +159,8 @@ const handleSoloGame = async (
 		bgsQuestsDifficulties: message.bgsQuestsDifficulties,
 		bgsHeroQuestRewards: message.bgsHeroQuestRewards,
 		bgsAnomalies: message.bgsAnomalies,
-	} as InternalBgsRow;
+		bgsTrinkets: message.bgsTrinkets,
+	};
 
 	const insertQuery = `
 		INSERT IGNORE INTO bgs_run_stats 
@@ -176,7 +180,8 @@ const handleSoloGame = async (
 			bgsQuestsCompletedTimings,
 			bgsQuestsDifficulties,
 			bgsHeroQuestRewards,
-			bgsAnomalies
+			bgsAnomalies,
+			bgsTrinkets
 		)
 		VALUES 
 		(
@@ -195,7 +200,8 @@ const handleSoloGame = async (
 			${nullIfEmpty(row.bgsQuestsCompletedTimings?.join(','))},
 			${nullIfEmpty(row.bgsQuestsDifficulties?.join(','))},
 			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))},
-			${nullIfEmpty(row.bgsAnomalies?.join(','))}
+			${nullIfEmpty(row.bgsAnomalies?.join(','))},
+			${nullIfEmpty(row.bgsTrinkets?.join(','))}
 		)
 	`;
 	// logger.debug('running query', insertQuery);
@@ -303,6 +309,7 @@ interface InternalBgsRow {
 	readonly bgsQuestsDifficulties: readonly number[];
 	readonly bgsHeroQuestRewards: readonly string[];
 	readonly bgsAnomalies: readonly string[];
+	readonly bgsTrinkets: readonly string[];
 }
 
 interface InternalCombatWinrate {

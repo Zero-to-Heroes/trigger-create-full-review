@@ -47,4 +47,6 @@ export interface ReviewMessage {
 	readonly bgBattleOdds: readonly { turn: number; wonPercent: number }[];
 	readonly bgsHasAnomalies: boolean;
 	readonly bgsAnomalies: readonly string[];
+	readonly bgsHasTrinkets: boolean;
+	readonly bgsTrinkets: readonly string[];
 }
