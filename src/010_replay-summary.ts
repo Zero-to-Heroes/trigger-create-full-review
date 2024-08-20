@@ -222,6 +222,7 @@ export const saveReplayInReplaySummary = async (
 		bgsAnomalies: bgsAnomalies,
 		bgsHasTrinkets: fullMetaData?.bgs?.hasTrinkets ?? replay?.hasBgsTrinkets,
 		bgsTrinkets: fullMetaData?.bgs?.trinkets?.map((t) => t.cardId),
+		bgsTrinketOptions: fullMetaData?.bgs?.trinketsOffered ?? [],
 	};
 
 	// const debug = reviewToNotify.appChannel === 'beta';

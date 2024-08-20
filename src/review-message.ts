@@ -49,4 +49,5 @@ export interface ReviewMessage {
 	readonly bgsAnomalies: readonly string[];
 	readonly bgsHasTrinkets: boolean;
 	readonly bgsTrinkets: readonly string[];
+	readonly bgsTrinketOptions: readonly string[];
 }
