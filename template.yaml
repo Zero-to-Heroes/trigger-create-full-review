@@ -72,10 +72,10 @@ Resources:
             Runtime: nodejs18.x
             Timeout: 120
             CodeUri: ./dist/create-full-review
-            MemorySize: 1200 # Increase memory to be able to handle big games like BGS
-            ReservedConcurrentExecutions: 45
-            # Layers:
-            #     - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+            MemorySize: 600
+            ReservedConcurrentExecutions: 50
+            Layers:
+                - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Tags:
                 LambdaName: trigger-create-full-review
             Policies:
