@@ -72,10 +72,10 @@ Resources:
             Runtime: nodejs18.x
             Timeout: 120
             CodeUri: ./dist/create-full-review
-            MemorySize: 600
-            ReservedConcurrentExecutions: 50
-            Layers:
-                - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+            MemorySize: 520
+            ReservedConcurrentExecutions: 65
+            # Layers:
+            #     - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Tags:
                 LambdaName: trigger-create-full-review
             Policies:
