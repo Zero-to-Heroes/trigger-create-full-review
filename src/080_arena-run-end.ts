@@ -1,10 +1,14 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
+import { logger } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { ServerlessMysql } from 'serverless-mysql';
 import { ReplayInfo } from './create-full-review';
 
-export const handleArenaRunEnd = async (replayInfo: ReplayInfo, allCards: AllCardsService): Promise<void> => {
+export const handleArenaRunEnd = async (
+	mysql: ServerlessMysql,
+	replayInfo: ReplayInfo,
+	allCards: AllCardsService,
+): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	const runId = message.runId;
 	if (!runId) {
@@ -23,9 +27,7 @@ export const handleArenaRunEnd = async (replayInfo: ReplayInfo, allCards: AllCar
 		allowGameShare: message.allowGameShare ?? true,
 	} as ArenaHighWinRun;
 
-	const mysql = await getConnection();
 	await saveRun(mysql, rowToInsert);
-	await mysql.end();
 };
 
 const saveRun = async (mysql: ServerlessMysql, run: ArenaHighWinRun) => {

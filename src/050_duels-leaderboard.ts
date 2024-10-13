@@ -3,6 +3,7 @@ import SqlString from 'sqlstring';
 import { ReplayInfo } from './create-full-review';
 
 export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<void> => {
+	return;
 	const review = replayInfo.reviewMessage;
 	// logger.debug('handling review', review);
 	const playerRank = review.playerRank ? parseInt(review.playerRank) : null;
@@ -51,5 +52,4 @@ export const updateDuelsLeaderboard = async (replayInfo: ReplayInfo): Promise<vo
 		const insertResult = await mysql.query(insertQuery);
 		// logger.debug('insert result', insertResult);
 	}
-	await mysql.end();
 };

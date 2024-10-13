@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection, logger, Sns } from '@firestone-hs/aws-lambda-utils';
+import { logger, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, parseBattlegroundsGame } from '@firestone-hs/hs-replay-xml-parser';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { ServerlessMysql } from 'serverless-mysql';
@@ -7,7 +7,12 @@ import SqlString from 'sqlstring';
 import { nullIfEmpty } from './010_replay-summary';
 import { ReplayInfo } from './create-full-review';
 
-export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCardsService, sns: Sns): Promise<void> => {
+export const buildBgsRunStats = async (
+	mysql: ServerlessMysql,
+	replayInfo: ReplayInfo,
+	allCards: AllCardsService,
+	sns: Sns,
+): Promise<void> => {
 	const message = replayInfo.reviewMessage;
 	if (
 		message.gameMode !== 'battlegrounds' &&
@@ -29,13 +34,11 @@ export const buildBgsRunStats = async (replayInfo: ReplayInfo, allCards: AllCard
 		? null
 		: parseBattlegroundsGame(replayString, null, null, null, allCards);
 
-	const mysql = await getConnection();
 	if (message.gameMode === 'battlegrounds-duo') {
 		await handleDuoGame(replayInfo, bgParsedInfo, allCards, mysql, sns);
 	} else {
 		handleSoloGame(replayInfo, bgParsedInfo, allCards, mysql, sns);
 	}
-	await mysql.end();
 };
 
 const handleDuoGame = async (

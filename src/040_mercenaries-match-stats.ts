@@ -112,7 +112,6 @@ export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCard
 	if (statsQuery) {
 		await mysql.query(statsQuery);
 	}
-	await mysql.end();
 };
 
 export const buildInsertQuery = (

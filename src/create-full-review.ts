@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { logBeforeTimeout, S3, Sns } from '@firestone-hs/aws-lambda-utils';
+import { getConnection, logBeforeTimeout, S3, Sns } from '@firestone-hs/aws-lambda-utils';
 import { BgsPostMatchStats, Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { ReplayUploadMetadata } from '@firestone-hs/replay-metadata';
+import { ServerlessMysql } from 'serverless-mysql';
 import { saveReplayInReplaySummary } from './010_replay-summary';
 import { buildMatchStats } from './020_match-stats';
 import { buildBgsRunStats } from './030_bgs-run-stats';
@@ -21,36 +22,39 @@ const cards = new AllCardsService();
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
 export default async (event, context): Promise<any> => {
-	// const cleanup = logBeforeTimeout(context);
-	// logger.debug(`Invocation requestId: ${context.awsRequestId}, SQS message ID: ${event.Records[0].messageId}`);
-	// logger.debug('received message', event);
+	// TODO: use a single mysql connection, and don't create / end() it every time, and see
+	// how it goes
+	// TODO: ideally, also batch messages?
 	const messages = event.Records.map((record) => record.body).map((msg) => JSON.parse(msg));
 	const s3infos = messages
 		.map((msg) => JSON.parse(msg.Message))
 		.map((msg) => msg.Records)
 		.reduce((a, b) => a.concat(b), [])
 		.map((record) => record.s3);
+	console.debug('processing', s3infos.length, 'replays');
 	// logger.debug('wait for cards db init');
 	await cards.initializeCardsDb();
 	// logger.debug('card db init done');
-	await Promise.all(s3infos.map((message) => handleReplay(message, context)));
+	const mysql = await getConnection();
+	await Promise.all(s3infos.map((message) => handleReplay(mysql, message, context)));
+	await mysql.end();
 	return { statusCode: 200, body: '' };
 };
 
-const handleReplay = async (message, context): Promise<void> => {
+const handleReplay = async (mysql: ServerlessMysql, message, context): Promise<void> => {
 	const cleanup = logBeforeTimeout(context);
 	const start = Date.now();
 	// logger.debug('start processing', message);
-	const replayInfo = await saveReplayInReplaySummary(message, s3, sns, cards);
+	const replayInfo = await saveReplayInReplaySummary(mysql, message, s3, sns, cards);
 	if (replayInfo) {
 		// logger.debug('replayInfo');
-		await buildMatchStats(replayInfo);
+		await buildMatchStats(mysql, replayInfo);
 		// logger.debug('after buildMatchStats');
 		if (
 			['battlegrounds', 'battlegrounds-friendly', 'battlegrounds-duo'].includes(replayInfo.reviewMessage.gameMode)
 		) {
 			// logger.debug('before buildBgsRunStats');
-			await buildBgsRunStats(replayInfo, cards, sns);
+			await buildBgsRunStats(mysql, replayInfo, cards, sns);
 			// logger.debug('after buildBgsRunStats');
 			await buildBgsPostMatchStats(replayInfo, cards, s3);
 			// logger.debug('after buildBgsPostMatchStats');
@@ -76,7 +80,7 @@ const handleReplay = async (message, context): Promise<void> => {
 				(wins === 11 && replayInfo.reviewMessage.result === 'won') ||
 				(losses === 2 && replayInfo.reviewMessage.result === 'lost')
 			) {
-				await handleArenaRunEnd(replayInfo, cards);
+				await handleArenaRunEnd(mysql, replayInfo, cards);
 			}
 		}
 	}

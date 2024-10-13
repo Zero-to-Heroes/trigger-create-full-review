@@ -16,6 +16,7 @@ import { ReplayInfo } from './create-full-review';
 import { formatDate, toCreationDate } from './services/utils';
 
 export const handleDuelsRunEnd = async (replayInfo: ReplayInfo, allCards: AllCardsService): Promise<void> => {
+	return;
 	const message = replayInfo.reviewMessage;
 	const runId = message.currentDuelsRunId ?? message.runId;
 	if (!runId) {

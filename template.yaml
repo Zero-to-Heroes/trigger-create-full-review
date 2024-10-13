@@ -93,4 +93,5 @@ Resources:
                     Type: SQS
                     Properties:
                         Queue: arn:aws:sqs:us-west-2:478062583808:replay-uploaded
-                        BatchSize: 1
+                        BatchSize: 60
+                        MaximumBatchingWindowInSeconds: 10

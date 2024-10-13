@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection } from '@firestone-hs/aws-lambda-utils';
 import { Replay } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { ServerlessMysql } from 'serverless-mysql';
 import SqlString from 'sqlstring';
 import { bgTribesExtractor } from './02_match-stats/battlegrounds/bg-tribes-extractor';
 import { bgsHeroPickExtractor } from './02_match-stats/battlegrounds/hero-pick-extractor';
@@ -11,7 +11,7 @@ import { normalizedXpGainedExtractor } from './02_match-stats/xp-gained-extracto
 import { ReplayInfo } from './create-full-review';
 import { ReviewMessage } from './review-message';
 
-export const buildMatchStats = async (replayInfo: ReplayInfo) => {
+export const buildMatchStats = async (mysql: ServerlessMysql, replayInfo: ReplayInfo) => {
 	// New mode, everything is inserted in one go
 	if (replayInfo.fullMetaData) {
 		return;
@@ -54,7 +54,6 @@ export const buildMatchStats = async (replayInfo: ReplayInfo) => {
 
 	const validStats = statsFromGame.filter((stat) => stat);
 	// logger.debug('validStats', validStats);
-	const mysql = await getConnection();
 	if (validStats.length > 0) {
 		const escape = SqlString.escape;
 
@@ -78,7 +77,6 @@ export const buildMatchStats = async (replayInfo: ReplayInfo) => {
 		// logger.debug('running second query', additionalQuery2);
 		await mysql.query(additionalQuery2);
 	}
-	await mysql.end();
 };
 
 const intValue = (value: string): number => {
