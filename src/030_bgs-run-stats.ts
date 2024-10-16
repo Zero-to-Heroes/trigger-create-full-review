@@ -79,6 +79,7 @@ const handleDuoGame = async (
 		bgsAnomalies: message.bgsAnomalies,
 		bgsTrinkets: message.bgsTrinkets,
 		bgsTrinketOptions: message.bgsTrinketOptions,
+		heroesOptions: message.bgsHeroesOptions,
 	};
 
 	const insertQuery = `
@@ -101,7 +102,8 @@ const handleDuoGame = async (
 			bgsHeroQuestRewards,
 			bgsAnomalies,
 			bgsTrinkets,
-			bgsTrinketsOptions
+			bgsTrinketsOptions,
+			heroesOptions
 		)
 		VALUES 
 		(
@@ -122,7 +124,8 @@ const handleDuoGame = async (
 			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))},
 			${nullIfEmpty(row.bgsAnomalies?.join(','))},
 			${nullIfEmpty(row.bgsTrinkets?.join(','))},
-			${nullIfEmpty(row.bgsTrinketOptions?.join(','))}
+			${nullIfEmpty(row.bgsTrinketOptions?.join(','))},
+			${nullIfEmpty(row.heroesOptions?.join(','))}
 		)
 	`;
 	// logger.debug('running query', insertQuery);
@@ -167,6 +170,7 @@ const handleSoloGame = async (
 		bgsAnomalies: message.bgsAnomalies,
 		bgsTrinkets: message.bgsTrinkets,
 		bgsTrinketOptions: message.bgsTrinketOptions,
+		heroesOptions: message.bgsHeroesOptions,
 	};
 
 	const insertQuery = `
@@ -189,7 +193,8 @@ const handleSoloGame = async (
 			bgsHeroQuestRewards,
 			bgsAnomalies,
 			bgsTrinkets,
-			bgsTrinketsOptions
+			bgsTrinketsOptions,
+			heroesOptions
 		)
 		VALUES 
 		(
@@ -210,7 +215,8 @@ const handleSoloGame = async (
 			${nullIfEmpty(row.bgsHeroQuestRewards?.join(','))},
 			${nullIfEmpty(row.bgsAnomalies?.join(','))},
 			${nullIfEmpty(row.bgsTrinkets?.join(','))},
-			${nullIfEmpty(row.bgsTrinketOptions?.join(','))}
+			${nullIfEmpty(row.bgsTrinketOptions?.join(','))},
+			${nullIfEmpty(row.heroesOptions?.join(','))}
 		)
 	`;
 	// logger.debug('running query', insertQuery);
@@ -320,6 +326,7 @@ interface InternalBgsRow {
 	readonly bgsAnomalies: readonly string[];
 	readonly bgsTrinkets: readonly string[];
 	readonly bgsTrinketOptions: readonly string[];
+	readonly heroesOptions: readonly string[];
 }
 
 interface InternalCombatWinrate {

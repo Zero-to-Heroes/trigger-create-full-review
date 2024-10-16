@@ -1,117 +1,115 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection, http, logger } from '@firestone-hs/aws-lambda-utils';
-import { Replay, extractTotalTurns } from '@firestone-hs/hs-replay-xml-parser/dist/public-api';
+import { logger } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, ScenarioId } from '@firestone-hs/reference-data';
 import SqlString from 'sqlstring';
 import { Stat } from './04_mercenaries-match-stats/stat';
-import { extractMercsStats } from './04_mercenaries-match-stats/stats-extractor';
 import { ReplayInfo } from './create-full-review';
-import { getCardLevel, isMercenaries, normalizeMercCardId } from './hs-utils';
+import { getCardLevel, normalizeMercCardId } from './hs-utils';
 import { ReviewMessage } from './review-message';
 
-let mercenariesReferenceData: MercenariesReferenceData = null;
+// let mercenariesReferenceData: MercenariesReferenceData = null;
 
 export const buildMercenariesMatchStats = async (replayInfo: ReplayInfo, allCards: AllCardsService): Promise<void> => {
 	return;
 
-	const message = replayInfo.reviewMessage;
-	if (!isMercenaries(message.gameMode)) {
-		return;
-	}
+	// const message = replayInfo.reviewMessage;
+	// if (!isMercenaries(message.gameMode)) {
+	// 	return;
+	// }
 
-	const scenarioId = +message.scenarioId;
-	const isPvP = scenarioId === ScenarioId.LETTUCE_PVP || scenarioId === ScenarioId.LETTUCE_PVP_VS_AI;
-	if (!isPvP) {
-		return;
-	}
+	// const scenarioId = +message.scenarioId;
+	// const isPvP = scenarioId === ScenarioId.LETTUCE_PVP || scenarioId === ScenarioId.LETTUCE_PVP_VS_AI;
+	// if (!isPvP) {
+	// 	return;
+	// }
 
-	if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
-		return;
-	}
+	// if (!message.playerRank || isNaN(parseInt(message.playerRank))) {
+	// 	return;
+	// }
 
-	// Leagues that were formatted
-	if (+message.playerRank >= 1 && +message.playerRank <= 5) {
-		return;
-	}
+	// // Leagues that were formatted
+	// if (+message.playerRank >= 1 && +message.playerRank <= 5) {
+	// 	return;
+	// }
 
-	// logger.debug(
-	// 	'processing',
+	// // logger.debug(
+	// // 	'processing',
+	// // 	message,
+	// // 	// scenarioId === ScenarioId.LETTUCE_MAP_PVE ? isNaN(parseInt(message.mercBountyId as any)) : null,
+	// // );
+
+	// if (!mercenariesReferenceData) {
+	// 	const strReferenceData = await http(
+	// 		`https://static.zerotoheroes.com/hearthstone/data/mercenaries-data.json?v=3`,
+	// 	);
+	// 	// logger.debug('found reference data', strReferenceData?.length);
+	// 	mercenariesReferenceData = JSON.parse(strReferenceData);
+	// 	// logger.debug('parsed reference data', mercenariesReferenceData);
+	// }
+
+	// const replay: Replay = replayInfo.replay;
+	// const numberOfTurns = replayInfo?.fullMetaData?.game.totalDurationTurns ?? extractTotalTurns(replay);
+	// if (numberOfTurns <= 3) {
+	// 	// logger.debug('game too short, not including it for stats', numberOfTurns);
+	// 	return;
+	// }
+
+	// const statsFromGame: readonly Stat[] = extractMercsStats(
 	// 	message,
-	// 	// scenarioId === ScenarioId.LETTUCE_MAP_PVE ? isNaN(parseInt(message.mercBountyId as any)) : null,
+	// 	replay,
+	// 	replayInfo.replayString,
+	// 	mercenariesReferenceData,
+	// 	allCards,
 	// );
 
-	if (!mercenariesReferenceData) {
-		const strReferenceData = await http(
-			`https://static.zerotoheroes.com/hearthstone/data/mercenaries-data.json?v=3`,
-		);
-		// logger.debug('found reference data', strReferenceData?.length);
-		mercenariesReferenceData = JSON.parse(strReferenceData);
-		// logger.debug('parsed reference data', mercenariesReferenceData);
-	}
+	// if (!statsFromGame.filter((stat) => stat.statName === 'mercs-hero-timing').length) {
+	// 	// logger.debug('no hero timings, returning', statsFromGame);
+	// 	return;
+	// }
 
-	const replay: Replay = replayInfo.replay;
-	const numberOfTurns = replayInfo?.fullMetaData?.game.totalDurationTurns ?? extractTotalTurns(replay);
-	if (numberOfTurns <= 3) {
-		// logger.debug('game too short, not including it for stats', numberOfTurns);
-		return;
-	}
+	// const heroTimings = statsFromGame
+	// 	.filter((stat) => stat.statName === 'mercs-hero-timing')
+	// 	.map((stat) => stat.statValue)
+	// 	.join(',');
+	// const opponentHeroTimings = statsFromGame
+	// 	.filter((stat) => stat.statName === 'opponent-mercs-hero-timing')
+	// 	.map((stat) => stat.statValue)
+	// 	.join(',');
+	// const heroEquipments = statsFromGame
+	// 	.filter((stat) => stat.statName === 'mercs-hero-equipment')
+	// 	.map((stat) => stat.statValue)
+	// 	.join(',');
+	// const heroLevels = statsFromGame
+	// 	.filter((stat) => stat.statName === 'mercs-hero-level')
+	// 	.map((stat) => stat.statValue)
+	// 	.join(',');
+	// const heroSkillsUsed = statsFromGame
+	// 	.filter((stat) => stat.statName === 'mercs-hero-skill-used')
+	// 	.map((stat) => stat.statValue)
+	// 	.join(',');
 
-	const statsFromGame: readonly Stat[] = extractMercsStats(
-		message,
-		replay,
-		replayInfo.replayString,
-		mercenariesReferenceData,
-		allCards,
-	);
+	// const escape = SqlString.escape;
+	// // And now insert it in the new table
+	// const replaySumaryUpdateQuery = `
+	// 		UPDATE replay_summary
+	// 		SET
+	// 			mercHeroTimings = ${escape(heroTimings)},
+	// 			mercHeroEquipments = ${escape(heroEquipments)},
+	// 			mercHeroLevels = ${escape(heroLevels)},
+	// 			mercHeroSkills = ${escape(heroSkillsUsed)},
+	// 			mercOpponentHeroTimings = ${escape(opponentHeroTimings)}
+	// 		WHERE
+	// 			reviewId = ${escape(message.reviewId)}
+	// 	`;
+	// // logger.debug('running second query', replaySumaryUpdateQuery);
+	// const mysql = await getConnection();
+	// await mysql.query(replaySumaryUpdateQuery);
 
-	if (!statsFromGame.filter((stat) => stat.statName === 'mercs-hero-timing').length) {
-		// logger.debug('no hero timings, returning', statsFromGame);
-		return;
-	}
-
-	const heroTimings = statsFromGame
-		.filter((stat) => stat.statName === 'mercs-hero-timing')
-		.map((stat) => stat.statValue)
-		.join(',');
-	const opponentHeroTimings = statsFromGame
-		.filter((stat) => stat.statName === 'opponent-mercs-hero-timing')
-		.map((stat) => stat.statValue)
-		.join(',');
-	const heroEquipments = statsFromGame
-		.filter((stat) => stat.statName === 'mercs-hero-equipment')
-		.map((stat) => stat.statValue)
-		.join(',');
-	const heroLevels = statsFromGame
-		.filter((stat) => stat.statName === 'mercs-hero-level')
-		.map((stat) => stat.statValue)
-		.join(',');
-	const heroSkillsUsed = statsFromGame
-		.filter((stat) => stat.statName === 'mercs-hero-skill-used')
-		.map((stat) => stat.statValue)
-		.join(',');
-
-	const escape = SqlString.escape;
-	// And now insert it in the new table
-	const replaySumaryUpdateQuery = `
-			UPDATE replay_summary
-			SET
-				mercHeroTimings = ${escape(heroTimings)},
-				mercHeroEquipments = ${escape(heroEquipments)},
-				mercHeroLevels = ${escape(heroLevels)},
-				mercHeroSkills = ${escape(heroSkillsUsed)},
-				mercOpponentHeroTimings = ${escape(opponentHeroTimings)}
-			WHERE
-				reviewId = ${escape(message.reviewId)}
-		`;
-	// logger.debug('running second query', replaySumaryUpdateQuery);
-	const mysql = await getConnection();
-	await mysql.query(replaySumaryUpdateQuery);
-
-	const statsQuery = buildInsertQuery(message, statsFromGame, allCards, mercenariesReferenceData);
-	// logger.debug('running query', statsQuery);
-	if (statsQuery) {
-		await mysql.query(statsQuery);
-	}
+	// const statsQuery = buildInsertQuery(message, statsFromGame, allCards, mercenariesReferenceData);
+	// // logger.debug('running query', statsQuery);
+	// if (statsQuery) {
+	// 	await mysql.query(statsQuery);
+	// }
 };
 
 export const buildInsertQuery = (

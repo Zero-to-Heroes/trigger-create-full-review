@@ -50,4 +50,5 @@ export interface ReviewMessage {
 	readonly bgsHasTrinkets: boolean;
 	readonly bgsTrinkets: readonly string[];
 	readonly bgsTrinketOptions: readonly string[];
+	readonly bgsHeroesOptions: readonly string[];
 }

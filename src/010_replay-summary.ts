@@ -224,6 +224,7 @@ export const saveReplayInReplaySummary = async (
 		bgsHasTrinkets: fullMetaData?.bgs?.hasTrinkets ?? replay?.hasBgsTrinkets,
 		bgsTrinkets: fullMetaData?.bgs?.trinkets?.map((t) => t.cardId),
 		bgsTrinketOptions: fullMetaData?.bgs?.trinketsOffered ?? [],
+		bgsHeroesOptions: fullMetaData?.bgs?.heroesOffered ?? [],
 	};
 
 	// const debug = reviewToNotify.appChannel === 'beta';
