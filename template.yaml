@@ -72,7 +72,7 @@ Resources:
             Runtime: nodejs18.x
             Timeout: 120
             CodeUri: ./dist/create-full-review
-            MemorySize: 640
+            MemorySize: 780
             ReservedConcurrentExecutions: 20
             # Layers:
             #     - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
@@ -95,3 +95,5 @@ Resources:
                         Queue: arn:aws:sqs:us-west-2:478062583808:replay-uploaded
                         BatchSize: 60
                         MaximumBatchingWindowInSeconds: 10
+                        FunctionResponseTypes:
+                            - ReportBatchItemFailures
