@@ -73,7 +73,7 @@ Resources:
             Timeout: 120
             CodeUri: ./dist/create-full-review
             MemorySize: 780
-            ReservedConcurrentExecutions: 20
+            ReservedConcurrentExecutions: 15
             # Layers:
             #     - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Tags:
