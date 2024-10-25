@@ -194,7 +194,8 @@ const handleSoloGame = async (
 			bgsAnomalies,
 			bgsTrinkets,
 			bgsTrinketsOptions,
-			heroesOptions
+			heroesOptions,
+			playedCards
 		)
 		VALUES 
 		(
@@ -216,7 +217,8 @@ const handleSoloGame = async (
 			${nullIfEmpty(row.bgsAnomalies?.join(','))},
 			${nullIfEmpty(row.bgsTrinkets?.join(','))},
 			${nullIfEmpty(row.bgsTrinketOptions?.join(','))},
-			${nullIfEmpty(row.heroesOptions?.join(','))}
+			${nullIfEmpty(row.heroesOptions?.join(','))},
+			${SqlString.escape(JSON.stringify(replayInfo?.fullMetaData?.stats?.playerPlayedCardsByTurn))}
 		)
 	`;
 	// logger.debug('running query', insertQuery);
