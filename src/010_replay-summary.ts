@@ -388,7 +388,7 @@ export const saveReplayInReplaySummary = async (
 		// 	// trigger-build-duels-run-stats
 		// 	// sns.notifyDuelsRunEndPublished(reviewToNotify);
 		// }
-	} else if (['ranked'].includes(gameMode)) {
+	} else if (['ranked', 'tavernbrawl', 'tavern-brawl'].includes(gameMode)) {
 		sns.notify(process.env.REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
