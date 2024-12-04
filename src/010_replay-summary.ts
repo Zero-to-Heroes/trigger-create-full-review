@@ -376,6 +376,7 @@ export const saveReplayInReplaySummary = async (
 	// logger.debug('closed connection');
 
 	debug && console.debug(reviewToNotify.userName, 'will send SNS', gameMode, reviewToNotify);
+	sns.notify(process.env.REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 	if (['duels', 'paid-duels'].includes(gameMode) && additionalResult) {
 		// // duels-leaderboard
 		// // sns.notifyDuelsReviewPublished(reviewToNotify);
@@ -389,7 +390,7 @@ export const saveReplayInReplaySummary = async (
 		// 	// sns.notifyDuelsRunEndPublished(reviewToNotify);
 		// }
 	} else if (['ranked', 'tavernbrawl', 'tavern-brawl'].includes(gameMode)) {
-		sns.notify(process.env.REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
+		// sns.notify(process.env.REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
 	} else if (['arena'].includes(gameMode)) {
