@@ -96,7 +96,7 @@ const handleReplay = async (
 					await handleDuelsRunEnd(replayInfo, cards);
 				}
 			} else if (
-				['arena'].includes(replayInfo.reviewMessage.gameMode) &&
+				['arena', 'arena-underground'].includes(replayInfo.reviewMessage.gameMode) &&
 				replayInfo.reviewMessage.additionalResult
 			) {
 				const [wins, losses] = replayInfo.reviewMessage.additionalResult

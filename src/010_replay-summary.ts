@@ -393,7 +393,7 @@ export const saveReplayInReplaySummary = async (
 		// sns.notify(process.env.REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
-	} else if (['arena'].includes(gameMode)) {
+	} else if (['arena', 'arena-underground'].includes(gameMode)) {
 		sns.notify(process.env.ARENA_REVIEW_PUBLISHED_SNS_TOPIC, JSON.stringify(reviewToNotify));
 		// For deck categorization only
 		// sns.notifyRankedReviewPublished(reviewToNotify);
