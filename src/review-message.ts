@@ -19,7 +19,6 @@ export interface ReviewMessage {
 	readonly userId: string;
 	readonly userName: string;
 	readonly gameFormat: GameFormatString;
-	readonly uploaderToken: string;
 	readonly buildNumber: number;
 	readonly playerDeckName: string;
 	readonly scenarioId: string;

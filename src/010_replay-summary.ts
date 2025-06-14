@@ -60,7 +60,6 @@ export const saveReplayInReplaySummary = async (
 	// 	throw new Error('Maestra games not supported yet');
 	// }
 
-	const uploaderToken = 'overwolf-' + userId;
 	const deckstring = fullMetaData?.game ? fullMetaData.game.deckstring : undefinedAsNull(metadata['deckstring']);
 	const playerDeckName = fullMetaData?.game ? fullMetaData.game.deckName : undefinedAsNull(metadata['deck-name']);
 	const scenarioId = fullMetaData?.game ? fullMetaData.game.scenarioId : undefinedAsNull(metadata['scenario-id']);
@@ -194,7 +193,6 @@ export const saveReplayInReplaySummary = async (
 		opponentRank: opponentRank,
 		userId: userId,
 		userName: userName,
-		uploaderToken: uploaderToken,
 		replayKey: replayKey,
 		metadataKey: key,
 		application: application,
@@ -284,13 +282,11 @@ export const saveReplayInReplaySummary = async (
 				opponentRank,
 				userId,
 				userName,
-				uploaderToken,
 				replayKey,
 				application,
 				realXpGain,
 				levelAfterMatch,
 				bgsHasPrizes,
-				mercsBountyId,
 				runId,
 				region,
 				allowGameShare,
@@ -338,13 +334,11 @@ export const saveReplayInReplaySummary = async (
 				${nullIfEmpty(opponentRank)},
 				${nullIfEmpty(userId)},
 				${nullIfEmpty(userName)},
-				${nullIfEmpty(uploaderToken)},
 				${nullIfEmpty(replayKey)},
 				${nullIfEmpty(application)},
 				${nullIfEmpty(fullMetaData?.meta.realXpGained ?? metadata['real-xp-gamed'])},
 				${nullIfEmpty(fullMetaData?.meta?.levelAfterMatch ?? metadata['level-after-match'])},
 				${bgsHasPrizes ? 1 : 0},
-				${nullIfEmpty(fullMetaData?.mercs?.bountyId ?? metadata['mercs-bounty-id'])},
 				${nullIfEmpty(runId)},
 				${fullMetaData?.meta.region ?? replay.region},
 				${allowGameShare ? 1 : 0},
